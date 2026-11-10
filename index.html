@@ -1,13 +1,49 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Controle de Serviços ZZIPING</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#17314c;font:16px system-ui,sans-serif}header{background:#17446d;color:#fff;padding:17px}main{max-width:850px;margin:auto;padding:15px}.card{background:#fff;padding:18px;border-radius:13px;margin:12px 0;box-shadow:0 1px 5px #0001}h1{font-size:20px;margin:0}h2{font-size:19px}nav{display:flex;gap:7px;overflow:auto;margin:12px 0}button{background:#1566bb;color:white;border:0;border-radius:9px;padding:12px 14px;font:inherit;cursor:pointer}button:disabled{opacity:.45}nav button{white-space:nowrap}.secondary{background:#e8eff7;color:#17446d}input,select,textarea{width:100%;display:block;font:inherit;padding:11px;margin:5px 0 13px;border:1px solid #c9d5e1;border-radius:9px}label{font-size:14px;font-weight:600}.muted{color:#64798b;font-size:13px}.hidden{display:none!important}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.metric{background:#ebf2f9;padding:13px;border-radius:10px}.metric strong{display:block;font-size:27px}.line{border-bottom:1px solid #e4eaf0;padding:12px 0}.error{color:#b32b34}.success{color:#137346}.badge{display:inline-block;font-size:12px;padding:4px 7px;border-radius:6px;background:#eaf0f7}.danger{color:#b32b34;background:#ffebee}.notice{padding:11px;border-radius:8px;background:#fff4d8;font-size:13px}.buttons{display:flex;gap:8px;flex-wrap:wrap}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:9px 5px;border-bottom:1px solid #ddd;text-align:left}td:last-child,th:last-child{text-align:right}@media print{header,nav,#login,#painel,#prestadores,#servicos,.notice,form,.no-print{display:none!important}#relatorios{display:block!important}body{background:white}.card{box-shadow:none}}@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+:root{--red:#ed3038;--red-dark:#ba1e29;--ink:#18191d;--bg:#f4f4f5;--soft:#fbeaec;--border:#e3e3e6}
+body{background:var(--bg);color:var(--ink)}
+header{background:var(--ink);border-bottom:4px solid var(--red);padding:16px max(16px,calc((100vw - 1080px)/2))}
+header h1{font-size:clamp(18px,2.6vw,25px);letter-spacing:.2px}
+header h1::first-letter{color:var(--red)}
+main{max-width:1080px;padding:clamp(10px,2.2vw,24px)}
+.card{border:1px solid var(--border);box-shadow:0 3px 14px #00000009}
+button{background:var(--red-dark);min-height:44px}
+button:hover{filter:brightness(.95)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f07b81;outline-offset:2px}
+.secondary{background:#ededf0;color:var(--ink)}
+.metric{background:#fff;border:1px solid var(--border);border-left:4px solid var(--red)}
+.badge{background:var(--soft);color:var(--red-dark)}
+input,select,textarea{border-color:#c8c8ce;min-height:44px}
+nav{overflow-x:auto;scrollbar-width:thin}
+nav button{flex:1}
+.buttons{align-items:center}
+#usuario{overflow-wrap:anywhere}
+.line{overflow-wrap:anywhere}
+.table-scroll{width:100%;overflow-x:auto}
+@media(max-width:600px){
+  header{padding:14px 12px}
+  main{padding:10px}
+  .card{padding:14px;border-radius:10px}
+  nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  nav button{width:100%;white-space:normal;padding:11px 6px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .metric{font-size:12px;padding:10px}
+  .metric strong{font-size:23px}
+  .line .buttons button{flex:1 1 125px}
+  #app>.buttons{justify-content:space-between}
+  table{min-width:480px}
+}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media print{nav,#auditoria{display:none!important}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><h1>✂ Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></header><main>
 <div id="login" class="card"><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p></div>
-<div id="app" class="hidden"><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button></nav><p id="status" class="muted"></p>
+<div id="app" class="hidden"><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button></nav><p id="status" class="muted"></p>
 <section id="painel"><div class="grid"><div class="metric">Serviços em aberto<strong id="nAbertos">0</strong></div><div class="metric">Serviços atrasados<strong id="nAtrasados">0</strong></div><div class="metric">Peças pendentes<strong id="nPecas">0</strong></div><div class="metric">Finalizados<strong id="nFinalizados">0</strong></div></div><div class="card"><h2>Serviços em aberto</h2><div id="pendentes"></div></div></section>
 <section id="prestadores" class="hidden"><div class="card"><h2>Cadastrar prestador</h2><form id="fp"><label>Nome<input name="nome" required></label><label>Telefone<input name="telefone" type="tel"></label><label>Endereço<input name="endereco"></label><label>Prazo padrão em dias<input name="prazo_dias" type="number" min="0" value="5" required></label><button>Cadastrar prestador</button></form></div><div class="card"><h2>Prestadores cadastrados</h2><div id="listaPrestadores"></div></div></section>
 <section id="servicos" class="hidden"><div class="card"><h2>Novo serviço</h2><form id="fs"><label>Prestador<select name="prestador_id" id="prestadorSelect" required></select></label><label>Descrição<input name="descricao" required></label><label>Quantidade de peças<input name="quantidade" type="number" min="1" required></label><label>Data de saída<input name="data_saida" id="saida" type="date" required></label><label>Previsão de devolução<input name="data_prevista" id="previsao" type="date" required></label><label>Observações<textarea name="observacoes"></textarea></label><button>Registrar saída</button></form></div><div class="card"><h2>Histórico de serviços</h2><div id="todos"></div></div></section>
-<section id="relatorios" class="hidden"><div class="card"><h2>Relatório mensal de produção</h2><form id="fr"><label>Prestador<select id="relPrestador" required></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section></div></main>
+<section id="relatorios" class="hidden"><div class="card"><h2>Relatório mensal de produção</h2><form id="fr"><label>Prestador<select id="relPrestador" required></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section><section id="auditoria" class="hidden"><div class="card"><h2>Histórico de operações</h2><p class="muted">Quem lançou, editou ou registrou devoluções. Os eventos começam após a ativação do SQL de auditoria.</p><button class="secondary no-print" onclick="carregarAuditoria()">Atualizar histórico</button><div id="listaAuditoria"></div></div></section></div></main>
 <script>
 const URL_SUPABASE="https://uzlmqwzneovxemnpssab.supabase.co",CHAVE_PUBLICA="sb_publishable_X5qkawe4rlrznwCv-cLL6w_1T2Znw0J";
 const $=x=>document.getElementById(x);const today=()=>new Date().toLocaleDateString('en-CA');const fmt=x=>x?x.split('-').reverse().join('/'):'';
@@ -20,7 +56,7 @@ function options(){const options='<option value="">Selecione</option>'+p.filter(
 function descricao(v){let pr=p.find(x=>x.id===v.prestador_id),q=pendente(v),atrasado=q>0&&v.data_prevista<today();return '<div class="line"><b>'+esc(pr?.nome||'Prestador')+'</b> '+(atrasado?'<span class="badge danger">Atrasado</span>':q===0?'<span class="badge">Finalizado</span>':'')+'<div>'+esc(v.descricao)+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Prazo: '+fmt(v.data_prevista)+' · '+q+' de '+v.quantidade+' peças pendentes</div>'+'<p class="buttons">'+(q?'<button class="secondary" onclick="darBaixa(\''+v.id+'\')">Dar baixa</button>':'')+'<button class="secondary" onclick="editarServico(\''+v.id+'\')">Editar serviço</button></p></div>'}
 function render(){options();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button></p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>'}
 async function carregar(){status('Sincronizando dados...');try{const [a,c,d]=await Promise.all([client.from('prestadores').select('*').order('nome'),client.from('servicos').select('*').order('criado_em',{ascending:false}),client.from('baixas').select('*').order('registrado_em',{ascending:false})]);for(const r of [a,c,d])if(r.error)throw r.error;p=a.data||[];s=c.data||[];b=d.data||[];render();status('Dados sincronizados com Supabase.')}catch(e){status('Falha ao carregar: '+e.message,true)}}
-function tab(id){tabAtual=id;for(const a of ['painel','servicos','prestadores','relatorios'])$(a).classList.toggle('hidden',a!==id);carregar()}
+function tab(id){tabAtual=id;for(const a of ['painel','servicos','prestadores','relatorios','auditoria'])$(a).classList.toggle('hidden',a!==id);carregar()}
 async function entrar(ev){ev.preventDefault();$('loginmsg').textContent='Entrando...';const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('senha').value});if(error){$('loginmsg').textContent=error.message;return}mostrar(data.session)}
 function mostrar(sess){session=sess;$('login').classList.toggle('hidden',!!sess);$('app').classList.toggle('hidden',!sess);if(sess){$('usuario').textContent=sess.user.email;$('senha').value='';carregar()}}
 async function sair(){await client.auth.signOut();mostrar(null);p=[];s=[];b=[]}
@@ -58,6 +94,19 @@ async function editarServico(id){
   if(b.some(x=>x.servico_id===id&&x.data_retorno<saida))return alert('A saída não pode ser posterior a uma baixa já registrada.');
   const observacoes=prompt('Observações:',v.observacoes||'');if(observacoes===null)return;
   await atualizarRegistro('servicos',id,{descricao:descricao.trim(),quantidade:Number(quantidade),data_saida:saida,data_prevista:prevista,observacoes});
+}
+async function carregarAuditoria(){
+ const el=$('listaAuditoria');el.textContent='Carregando histórico...';
+ const {data,error}=await client.from('auditoria_operacoes').select('tabela,registro_id,operacao,usuario_email,usuario_id,ocorrido_em,antes,depois').order('ocorrido_em',{ascending:false}).limit(200);
+ if(error){el.textContent='Histórico ainda não disponível: '+error.message+'. Execute o arquivo auditoria.sql no Supabase.';return;}
+ const names={prestadores:'Prestador',servicos:'Serviço',baixas:'Baixa'};
+ const acts={INSERT:'Lançamento',UPDATE:'Edição',DELETE:'Exclusão'};
+ el.innerHTML=(data||[]).map(x=>{
+  const obj=x.depois||x.antes||{};
+  const resumo=x.tabela==='prestadores'?obj.nome:x.tabela==='servicos'?obj.descricao:x.tabela==='baixas'?(obj.quantidade+' peça(s) devolvidas'):'';
+  const mudancas=x.operacao==='UPDATE'?Object.keys(x.depois||{}).filter(k=>JSON.stringify(x.antes?.[k])!==JSON.stringify(x.depois?.[k])).join(', '):'';
+  return '<div class="line"><b>'+esc(acts[x.operacao]||x.operacao)+' · '+esc(names[x.tabela]||x.tabela)+'</b><div>'+esc(resumo)+'</div><div class="muted">'+esc(new Date(x.ocorrido_em).toLocaleString('pt-BR'))+' · '+esc(x.usuario_email||x.usuario_id||'Operação administrativa')+(mudancas?' · Campos: '+esc(mudancas):'')+'</div></div>';
+ }).join('')||'<p class="muted">Nenhuma operação registrada após a ativação.</p>';
 }
 function gerar(ev){ev.preventDefault();const id=$('relPrestador').value,ini=$('inicio').value,fim=$('fim').value;if(ini>fim)return alert('Período inválido');const prest=p.find(x=>x.id===id),dados=b.filter(x=>x.data_retorno>=ini&&x.data_retorno<=fim).map(x=>({...x,servico:s.find(z=>z.id===x.servico_id)})).filter(x=>x.servico?.prestador_id===id).sort((x,y)=>x.data_retorno.localeCompare(y.data_retorno));$('report').innerHTML='<h3>Produção: '+esc(prest?.nome)+' — '+fmt(ini)+' a '+fmt(fim)+'</h3><table><thead><tr><th>Retorno</th><th>Serviço</th><th>Peças</th></tr></thead><tbody>'+dados.map(x=>'<tr><td>'+fmt(x.data_retorno)+'</td><td>'+esc(x.servico.descricao)+'</td><td>'+x.quantidade+'</td></tr>').join('')+'</tbody></table><h3>Total de peças: '+dados.reduce((t,x)=>t+x.quantidade,0)+'</h3>'}
 function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('fp').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);salvarTabela('prestadores',{nome:f.get('nome'),telefone:f.get('telefone'),endereco:f.get('endereco'),prazo_dias:Number(f.get('prazo_dias'))},ev.target)});$('fs').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);if(f.get('data_prevista')<f.get('data_saida'))return alert('Prazo não pode ser anterior à saída');salvarTabela('servicos',{prestador_id:f.get('prestador_id'),descricao:f.get('descricao'),quantidade:Number(f.get('quantidade')),data_saida:f.get('data_saida'),data_prevista:f.get('data_prevista'),observacoes:f.get('observacoes'),criado_por:session.user.id},ev.target)});$('prestadorSelect').addEventListener('change',()=>{let pr=p.find(x=>x.id===$('prestadorSelect').value);if(pr)$('previsao').value=addDays($('saida').value||today(),pr.prazo_dias)});$('saida').addEventListener('change',()=>$('prestadorSelect').dispatchEvent(new Event('change')));$('fr').addEventListener('submit',gerar);$('saida').value=today();$('inicio').value=today().slice(0,7)+'-01';$('fim').value=today();client.auth.getSession().then(({data,error})=>{if(error)$('loginmsg').textContent=error.message;mostrar(data?.session||null)});client.auth.onAuthStateChange((_event,sess)=>{if(!sess)mostrar(null)})}window.addEventListener('DOMContentLoaded',init);
