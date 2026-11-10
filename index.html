@@ -42,7 +42,7 @@ async function editarPrestador(id){
   const telefone=prompt('Telefone:',v.telefone||'');if(telefone===null)return;
   const endereco=prompt('Endereço:',v.endereco||'');if(endereco===null)return;
   const prazo=prompt('Prazo padrão em dias:',String(v.prazo_dias));if(prazo===null)return;
-  if(!/^\\d+$/.test(prazo))return alert('Prazo inválido.');
+  if(!/^\d+$/.test(prazo))return alert('Prazo inválido.');
   await atualizarRegistro('prestadores',id,{nome:nome.trim(),telefone,endereco,prazo_dias:Number(prazo)});
 }
 async function editarServico(id){
@@ -51,10 +51,10 @@ async function editarServico(id){
   if(!descricao.trim())return alert('Descrição obrigatória.');
   const quantidade=prompt('Quantidade total de peças:',String(v.quantidade));if(quantidade===null)return;
   const devolvidas=b.filter(x=>x.servico_id===id).reduce((t,x)=>t+x.quantidade,0);
-  if(!/^\\d+$/.test(quantidade)||Number(quantidade)<1||Number(quantidade)<devolvidas)return alert('Quantidade inválida ou menor que as peças já devolvidas.');
+  if(!/^\d+$/.test(quantidade)||Number(quantidade)<1||Number(quantidade)<devolvidas)return alert('Quantidade inválida ou menor que as peças já devolvidas.');
   const saida=prompt('Data de saída (AAAA-MM-DD):',v.data_saida);if(saida===null)return;
   const prevista=prompt('Previsão de devolução (AAAA-MM-DD):',v.data_prevista);if(prevista===null)return;
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(saida)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(prevista)||prevista<saida)return alert('Datas inválidas.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(saida)||!/^\d{4}-\d{2}-\d{2}$/.test(prevista)||prevista<saida)return alert('Datas inválidas.');
   if(b.some(x=>x.servico_id===id&&x.data_retorno<saida))return alert('A saída não pode ser posterior a uma baixa já registrada.');
   const observacoes=prompt('Observações:',v.observacoes||'');if(observacoes===null)return;
   await atualizarRegistro('servicos',id,{descricao:descricao.trim(),quantidade:Number(quantidade),data_saida:saida,data_prevista:prevista,observacoes});
