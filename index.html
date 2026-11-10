@@ -36,14 +36,19 @@ nav button{flex:1}
 }
 @media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media print{nav,#auditoria{display:none!important}}
-</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
+.audit-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.audit-filters label{font-size:13px;font-weight:600}.audit-filters select,.audit-filters input{width:100%;margin-top:5px}.audit-detail{font-size:13px;line-height:1.6}.audit-changes{margin:7px 0;padding:8px;background:#faf3f4;border-radius:7px}.audit-changes div{margin:3px 0}@media(max-width:700px){.audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:390px){.audit-filters{grid-template-columns:1fr}}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><h1>✂ Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></header><main>
 <div id="login" class="card"><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p></div>
 <div id="app" class="hidden"><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button></nav><p id="status" class="muted"></p>
 <section id="painel"><div class="grid"><div class="metric">Serviços em aberto<strong id="nAbertos">0</strong></div><div class="metric">Serviços atrasados<strong id="nAtrasados">0</strong></div><div class="metric">Peças pendentes<strong id="nPecas">0</strong></div><div class="metric">Finalizados<strong id="nFinalizados">0</strong></div></div><div class="card"><h2>Serviços em aberto</h2><div id="pendentes"></div></div></section>
 <section id="prestadores" class="hidden"><div class="card"><h2>Cadastrar prestador</h2><form id="fp"><label>Nome<input name="nome" required></label><label>Telefone<input name="telefone" type="tel"></label><label>Endereço<input name="endereco"></label><label>Prazo padrão em dias<input name="prazo_dias" type="number" min="0" value="5" required></label><button>Cadastrar prestador</button></form></div><div class="card"><h2>Prestadores cadastrados</h2><div id="listaPrestadores"></div></div></section>
 <section id="servicos" class="hidden"><div class="card"><h2>Novo serviço</h2><form id="fs"><label>Prestador<select name="prestador_id" id="prestadorSelect" required></select></label><label>Descrição<input name="descricao" required></label><label>Quantidade de peças<input name="quantidade" type="number" min="1" required></label><label>Data de saída<input name="data_saida" id="saida" type="date" required></label><label>Previsão de devolução<input name="data_prevista" id="previsao" type="date" required></label><label>Observações<textarea name="observacoes"></textarea></label><button>Registrar saída</button></form></div><div class="card"><h2>Histórico de serviços</h2><div id="todos"></div></div></section>
-<section id="relatorios" class="hidden"><div class="card"><h2>Relatório mensal de produção</h2><form id="fr"><label>Prestador<select id="relPrestador" required></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section><section id="auditoria" class="hidden"><div class="card"><h2>Histórico de operações</h2><p class="muted">Quem lançou, editou ou registrou devoluções. Os eventos começam após a ativação do SQL de auditoria.</p><button class="secondary no-print" onclick="carregarAuditoria()">Atualizar histórico</button><div id="listaAuditoria"></div></div></section></div></main>
+<section id="relatorios" class="hidden"><div class="card"><h2>Relatório mensal de produção</h2><form id="fr"><label>Prestador<select id="relPrestador" required></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section><section id="auditoria" class="hidden"><div class="card"><h2>Histórico de operações</h2><p class="muted">Quem lançou, editou ou registrou devoluções. Os eventos começam após a ativação do SQL de auditoria.</p><div class="audit-filters">
+<label>Prestador<select id="audPrestador" onchange="filtrarAuditoria()"><option value="">Todos</option></select></label>
+<label>Usuário<select id="audUsuario" onchange="filtrarAuditoria()"><option value="">Todos</option></select></label>
+<label>De<input id="audInicio" type="date" onchange="filtrarAuditoria()"></label>
+<label>Até<input id="audFim" type="date" onchange="filtrarAuditoria()"></label>
+</div><div class="buttons"><button class="secondary no-print" onclick="carregarAuditoria()">Atualizar histórico</button><button class="secondary no-print" onclick="limparFiltrosAuditoria()">Limpar filtros</button></div><p id="audTotal" class="muted"></p><div id="listaAuditoria"></div></div></section></div></main>
 <script>
 const URL_SUPABASE="https://uzlmqwzneovxemnpssab.supabase.co",CHAVE_PUBLICA="sb_publishable_X5qkawe4rlrznwCv-cLL6w_1T2Znw0J";
 const $=x=>document.getElementById(x);const today=()=>new Date().toLocaleDateString('en-CA');const fmt=x=>x?x.split('-').reverse().join('/'):'';
@@ -56,7 +61,7 @@ function options(){const options='<option value="">Selecione</option>'+p.filter(
 function descricao(v){let pr=p.find(x=>x.id===v.prestador_id),q=pendente(v),atrasado=q>0&&v.data_prevista<today();return '<div class="line"><b>'+esc(pr?.nome||'Prestador')+'</b> '+(atrasado?'<span class="badge danger">Atrasado</span>':q===0?'<span class="badge">Finalizado</span>':'')+'<div>'+esc(v.descricao)+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Prazo: '+fmt(v.data_prevista)+' · '+q+' de '+v.quantidade+' peças pendentes</div>'+'<p class="buttons">'+(q?'<button class="secondary" onclick="darBaixa(\''+v.id+'\')">Dar baixa</button>':'')+'<button class="secondary" onclick="editarServico(\''+v.id+'\')">Editar serviço</button></p></div>'}
 function render(){options();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button></p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>'}
 async function carregar(){status('Sincronizando dados...');try{const [a,c,d]=await Promise.all([client.from('prestadores').select('*').order('nome'),client.from('servicos').select('*').order('criado_em',{ascending:false}),client.from('baixas').select('*').order('registrado_em',{ascending:false})]);for(const r of [a,c,d])if(r.error)throw r.error;p=a.data||[];s=c.data||[];b=d.data||[];render();status('Dados sincronizados com Supabase.')}catch(e){status('Falha ao carregar: '+e.message,true)}}
-function tab(id){tabAtual=id;for(const a of ['painel','servicos','prestadores','relatorios','auditoria'])$(a).classList.toggle('hidden',a!==id);carregar()}
+function tab(id){tabAtual=id;for(const a of ['painel','servicos','prestadores','relatorios','auditoria'])$(a).classList.toggle('hidden',a!==id);carregar();if(id==='auditoria')carregarAuditoria()}
 async function entrar(ev){ev.preventDefault();$('loginmsg').textContent='Entrando...';const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('senha').value});if(error){$('loginmsg').textContent=error.message;return}mostrar(data.session)}
 function mostrar(sess){session=sess;$('login').classList.toggle('hidden',!!sess);$('app').classList.toggle('hidden',!sess);if(sess){$('usuario').textContent=sess.user.email;$('senha').value='';carregar()}}
 async function sair(){await client.auth.signOut();mostrar(null);p=[];s=[];b=[]}
@@ -95,18 +100,50 @@ async function editarServico(id){
   const observacoes=prompt('Observações:',v.observacoes||'');if(observacoes===null)return;
   await atualizarRegistro('servicos',id,{descricao:descricao.trim(),quantidade:Number(quantidade),data_saida:saida,data_prevista:prevista,observacoes});
 }
+let eventosAuditoria=[];
+function auditoriaContexto(x){
+ const obj=x.depois||x.antes||{};
+ const svc=x.tabela==='servicos'?obj:s.find(v=>v.id===obj.servico_id);
+ const historicoServico=eventosAuditoria.find(a=>a.tabela==='servicos'&&a.registro_id===obj.servico_id);
+ const sv=svc||historicoServico?.depois||historicoServico?.antes;
+ const prestadorId=x.tabela==='prestadores'?x.registro_id:sv?.prestador_id;
+ const historicoPrestador=eventosAuditoria.find(a=>a.tabela==='prestadores'&&a.registro_id===prestadorId);
+ const prestador=p.find(v=>v.id===prestadorId)?.nome||historicoPrestador?.depois?.nome||historicoPrestador?.antes?.nome||'';
+ return {obj,sv,prestadorId,prestador};
+}
+function audCampo(k){return ({nome:'Nome',telefone:'Telefone',endereco:'Endereço',prazo_dias:'Prazo padrão',descricao:'Descrição',quantidade:'Quantidade',data_saida:'Data de saída',data_prevista:'Prazo de entrega',observacoes:'Observações',ativo:'Ativo',prestador_id:'Prestador',servico_id:'Serviço',data_retorno:'Data da devolução'})[k]||k}
+function audValor(v){if(v===null||v===undefined)return 'vazio';if(typeof v==='object')return JSON.stringify(v);return String(v)}
+function filtrarAuditoria(){
+ const pr=$('audPrestador').value,us=$('audUsuario').value,ini=$('audInicio').value,fim=$('audFim').value;
+ const names={prestadores:'Prestador',servicos:'Serviço',baixas:'Baixa'};
+ const acts={INSERT:'Lançamento',UPDATE:'Edição',DELETE:'Exclusão'};
+ const lista=eventosAuditoria.filter(x=>{
+  const ctx=auditoriaContexto(x);
+  const d=x.ocorrido_em.slice(0,10);
+  return (!pr||ctx.prestadorId===pr)&&(!us||(x.usuario_email||x.usuario_id||'Operação administrativa')===us)&&(!ini||d>=ini)&&(!fim||d<=fim);
+ });
+ $('audTotal').textContent=lista.length+' operação(ões) encontrada(s) · últimas 200 operações consultadas';
+ $('listaAuditoria').innerHTML=lista.map(x=>{
+  const ctx=auditoriaContexto(x),o=ctx.obj;
+  const resumo=x.tabela==='prestadores'?o.nome:x.tabela==='servicos'?o.descricao:x.tabela==='baixas'?(o.quantidade+' peça(s) devolvidas'):'';
+  const detalhes=x.tabela==='baixas'?'Serviço: '+(ctx.sv?.descricao||'Registro '+(o.servico_id||''))+' · Data da devolução: '+fmt(o.data_retorno):x.tabela==='servicos'?'Quantidade: '+o.quantidade+' · Saída: '+fmt(o.data_saida)+' · Prazo: '+fmt(o.data_prevista):'';
+  const changes=x.operacao==='UPDATE'?Object.keys(x.depois||{}).filter(k=>JSON.stringify(x.antes?.[k])!==JSON.stringify(x.depois?.[k])).map(k=>'<div><b>'+esc(audCampo(k))+':</b> '+esc(audValor(x.antes?.[k]))+' → '+esc(audValor(x.depois?.[k]))+'</div>').join(''):'';
+  return '<div class="line audit-detail"><b>'+esc(acts[x.operacao]||x.operacao)+' · '+esc(names[x.tabela]||x.tabela)+'</b><div>'+esc(resumo)+'</div>'+(ctx.prestador&&x.tabela!=='prestadores'?'<div><b>Prestador:</b> '+esc(ctx.prestador)+'</div>':'')+(detalhes?'<div>'+esc(detalhes)+'</div>':'')+(changes?'<div class="audit-changes">'+changes+'</div>':'')+'<div class="muted">'+esc(new Date(x.ocorrido_em).toLocaleString('pt-BR'))+' · '+esc(x.usuario_email||x.usuario_id||'Operação administrativa')+'</div></div>';
+ }).join('')||'<p class="muted">Nenhuma operação encontrada para os filtros selecionados.</p>';
+}
+function limparFiltrosAuditoria(){for(const id of ['audPrestador','audUsuario','audInicio','audFim'])$(id).value='';filtrarAuditoria()}
 async function carregarAuditoria(){
  const el=$('listaAuditoria');el.textContent='Carregando histórico...';
  const {data,error}=await client.from('auditoria_operacoes').select('tabela,registro_id,operacao,usuario_email,usuario_id,ocorrido_em,antes,depois').order('ocorrido_em',{ascending:false}).limit(200);
- if(error){el.textContent='Histórico ainda não disponível: '+error.message+'. Execute o arquivo auditoria.sql no Supabase.';return;}
- const names={prestadores:'Prestador',servicos:'Serviço',baixas:'Baixa'};
- const acts={INSERT:'Lançamento',UPDATE:'Edição',DELETE:'Exclusão'};
- el.innerHTML=(data||[]).map(x=>{
-  const obj=x.depois||x.antes||{};
-  const resumo=x.tabela==='prestadores'?obj.nome:x.tabela==='servicos'?obj.descricao:x.tabela==='baixas'?(obj.quantidade+' peça(s) devolvidas'):'';
-  const mudancas=x.operacao==='UPDATE'?Object.keys(x.depois||{}).filter(k=>JSON.stringify(x.antes?.[k])!==JSON.stringify(x.depois?.[k])).join(', '):'';
-  return '<div class="line"><b>'+esc(acts[x.operacao]||x.operacao)+' · '+esc(names[x.tabela]||x.tabela)+'</b><div>'+esc(resumo)+'</div><div class="muted">'+esc(new Date(x.ocorrido_em).toLocaleString('pt-BR'))+' · '+esc(x.usuario_email||x.usuario_id||'Operação administrativa')+(mudancas?' · Campos: '+esc(mudancas):'')+'</div></div>';
- }).join('')||'<p class="muted">Nenhuma operação registrada após a ativação.</p>';
+ if(error){el.textContent='Não foi possível consultar o histórico: '+error.message;return;}
+ eventosAuditoria=data||[];
+ const pr=$('audPrestador'),usr=$('audUsuario'),oldPr=pr.value,oldUsr=usr.value;
+ const prestadores=[...new Map([...p.map(x=>[x.id,x.nome]),...eventosAuditoria.filter(x=>x.tabela==='prestadores').map(x=>[x.registro_id,(x.depois||x.antes)?.nome])].filter(x=>x[0]&&x[1])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
+ pr.innerHTML='<option value="">Todos</option>'+prestadores.map(([id,nome])=>'<option value="'+esc(id)+'">'+esc(nome)+'</option>').join('');
+ const usuarios=[...new Set(eventosAuditoria.map(x=>x.usuario_email||x.usuario_id||'Operação administrativa'))].sort();
+ usr.innerHTML='<option value="">Todos</option>'+usuarios.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+ pr.value=oldPr;usr.value=oldUsr;
+ filtrarAuditoria();
 }
 function gerar(ev){ev.preventDefault();const id=$('relPrestador').value,ini=$('inicio').value,fim=$('fim').value;if(ini>fim)return alert('Período inválido');const prest=p.find(x=>x.id===id),dados=b.filter(x=>x.data_retorno>=ini&&x.data_retorno<=fim).map(x=>({...x,servico:s.find(z=>z.id===x.servico_id)})).filter(x=>x.servico?.prestador_id===id).sort((x,y)=>x.data_retorno.localeCompare(y.data_retorno));$('report').innerHTML='<h3>Produção: '+esc(prest?.nome)+' — '+fmt(ini)+' a '+fmt(fim)+'</h3><table><thead><tr><th>Retorno</th><th>Serviço</th><th>Peças</th></tr></thead><tbody>'+dados.map(x=>'<tr><td>'+fmt(x.data_retorno)+'</td><td>'+esc(x.servico.descricao)+'</td><td>'+x.quantidade+'</td></tr>').join('')+'</tbody></table><h3>Total de peças: '+dados.reduce((t,x)=>t+x.quantidade,0)+'</h3>'}
 function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('fp').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);salvarTabela('prestadores',{nome:f.get('nome'),telefone:f.get('telefone'),endereco:f.get('endereco'),prazo_dias:Number(f.get('prazo_dias'))},ev.target)});$('fs').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);if(f.get('data_prevista')<f.get('data_saida'))return alert('Prazo não pode ser anterior à saída');salvarTabela('servicos',{prestador_id:f.get('prestador_id'),descricao:f.get('descricao'),quantidade:Number(f.get('quantidade')),data_saida:f.get('data_saida'),data_prevista:f.get('data_prevista'),observacoes:f.get('observacoes'),criado_por:session.user.id},ev.target)});$('prestadorSelect').addEventListener('change',()=>{let pr=p.find(x=>x.id===$('prestadorSelect').value);if(pr)$('previsao').value=addDays($('saida').value||today(),pr.prazo_dias)});$('saida').addEventListener('change',()=>$('prestadorSelect').dispatchEvent(new Event('change')));$('fr').addEventListener('submit',gerar);$('saida').value=today();$('inicio').value=today().slice(0,7)+'-01';$('fim').value=today();client.auth.getSession().then(({data,error})=>{if(error)$('loginmsg').textContent=error.message;mostrar(data?.session||null)});client.auth.onAuthStateChange((_event,sess)=>{if(!sess)mostrar(null)})}window.addEventListener('DOMContentLoaded',init);
