@@ -36,7 +36,35 @@ nav button{flex:1}
 }
 @media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media print{nav,#auditoria{display:none!important}}
-.audit-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.audit-filters label{font-size:13px;font-weight:600}.audit-filters select,.audit-filters input{width:100%;margin-top:5px}.audit-detail{font-size:13px;line-height:1.6}.audit-changes{margin:7px 0;padding:8px;background:#faf3f4;border-radius:7px}.audit-changes div{margin:3px 0}@media(max-width:700px){.audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:390px){.audit-filters{grid-template-columns:1fr}}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
+.audit-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.audit-filters label{font-size:13px;font-weight:600}.audit-filters select,.audit-filters input{width:100%;margin-top:5px}.audit-detail{font-size:13px;line-height:1.6}.audit-changes{margin:7px 0;padding:8px;background:#faf3f4;border-radius:7px}.audit-changes div{margin:3px 0}@media(max-width:700px){.audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:390px){.audit-filters{grid-template-columns:1fr}}
+/* Ajuste responsivo para celulares, inclusive telas estreitas */
+html{width:100%;-webkit-text-size-adjust:100%}
+body{min-width:0;overflow-x:hidden}
+main,#app,section,.card,.line,.grid,.buttons,form{min-width:0;max-width:100%}
+button,input,select,textarea{max-width:100%}
+button{overflow-wrap:anywhere}
+table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+td,th{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:700px){
+ nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+ nav button{min-width:0;width:100%;white-space:normal;font-size:clamp(12px,3.4vw,15px);padding:10px 5px}
+ .audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .buttons{flex-wrap:wrap}
+ .buttons button{flex:1 1 auto}
+ .line button{max-width:100%;white-space:normal}
+ table{min-width:0}
+}
+@media(max-width:360px){
+ main{padding:8px}
+ .card{padding:11px}
+ nav{gap:6px}
+ nav button{font-size:12px;padding:9px 4px}
+ .grid{gap:6px}
+ .metric{padding:8px;font-size:11px}
+ .metric strong{font-size:21px}
+ .audit-filters{grid-template-columns:1fr}
+}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><h1>✂ Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></header><main>
 <div id="login" class="card"><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
 <div id="app" class="hidden"><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button><button id="navUsuarios" class="hidden" onclick="tab('usuarios')">Usuários</button></nav><p id="status" class="muted"></p>
