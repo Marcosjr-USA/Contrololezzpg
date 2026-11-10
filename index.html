@@ -430,8 +430,19 @@ async function carregarUsuarios(){
  msg.textContent=(data||[]).length+' conta(s) · '+pendentes+' aguardando aprovação ou bloqueada(s)';
  el.innerHTML=(data||[]).map(x=>{
   const proprio=x.usuario_id===session.user.id;
-  return '<div class="line"><b>'+esc(x.email)+'</b><div class="muted">'+(x.ativo?'Ativo':'Aguardando aprovação / bloqueado')+(x.administrador?' · Administrador':'')+'</div>'+(!proprio?'<button class="secondary" onclick="definirAcesso(\''+esc(x.usuario_id)+'\','+(!x.ativo)+')">'+(x.ativo?'Bloquear acesso':'Aprovar / reativar')+'</button>':'<span class="muted">Sua conta principal</span>')+'</div>';
+  return '<div class="line"><b>'+esc(x.email)+'</b><div class="muted">'+(x.ativo?'Ativo':'Aguardando aprovação / bloqueado')+(x.administrador?' · Administrador':'')+'</div>'+(!proprio?'<button class="secondary" onclick="definirAcesso(\''+esc(x.usuario_id)+'\','+(!x.ativo)+')">'+(x.ativo?'Bloquear acesso':'Aprovar / reativar')+'</button><button class="secondary" style="color:#b32b34;margin-left:7px" onclick="excluirUsuarioDefinitivo(\''+esc(x.usuario_id)+'\',\''+esc(x.email)+'\')">Excluir definitivamente</button>':'<span class="muted">Sua conta principal</span>')+'</div>';
  }).join('')||'<p>Nenhuma conta encontrada.</p>';
+}
+async function excluirUsuarioDefinitivo(id,email){
+ if(!adminPrincipal||id===session?.user?.id)return;
+ if(!confirm('Excluir DEFINITIVAMENTE a conta '+email+'? O funcionário perderá o acesso e essa operação não poderá ser desfeita.'))return;
+ const digitado=prompt('Para confirmar, digite EXCLUIR em letras maiúsculas:');
+ if(digitado!=='EXCLUIR')return;
+ const {data,error}=await client.functions.invoke('excluir-usuario',{body:{usuario_id:id}});
+ if(error){alert('A exclusão definitiva ainda precisa ser ativada no servidor Supabase. Nenhuma conta foi excluída.');return}
+ if(data?.message!=='Conta excluída definitivamente'){alert(data?.message||'Não foi possível confirmar a exclusão.');return}
+ alert('Conta excluída definitivamente.');
+ await carregarUsuarios();
 }
 async function definirAcesso(id,ativo){
  if(!adminPrincipal)return;
