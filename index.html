@@ -225,8 +225,9 @@ function renderDashboardMod2(){
  const grupos=[['andamento','Em andamento','layers','#2563eb'],['concluido','Concluídos','check-circle','#13843a'],['aguardando','Devolução parcial','clock','#e99a0c'],['atrasado','Atrasados','alert-triangle','#e12632']];
  const contagens=Object.fromEntries(grupos.map(([ch])=>[ch,recorte.filter(v=>mod2Categoria(v)===ch).length]));
  const ativos=p.filter(v=>v.ativo).length;
- const kpis=[...grupos.map(([ch,n,icone,cor])=>[n,contagens[ch],cor,icone]),['Prestadores ativos',ativos,'#6d3bba','users']];
- $('mod2Indicadores').innerHTML=kpis.map(([nome,numero,cor,icone])=>'<div class="mod2-kpi" style="--kpi-cor:'+cor+'"><span class="mod2-kpi-icon">'+({'layers':'▤','check-circle':'✓','clock':'◷','alert-triangle':'⚠','users':'♟'}[icone])+'</span><div><span>'+esc(nome)+'</span><strong>'+numero+'</strong></div></div>').join('');
+ const pecasPendentes=s.reduce((total,v)=>total+Math.max(0,pendente(v)),0);
+ const kpis=[['Em andamento',contagens.andamento,'#2563eb','layers'],['Peças pendentes',pecasPendentes,'#b45309','package'],...grupos.filter(([ch])=>ch!=='andamento').map(([ch,n,icone,cor])=>[n,contagens[ch],cor,icone]),['Prestadores ativos',ativos,'#6d3bba','users']];
+ $('mod2Indicadores').innerHTML=kpis.map(([nome,numero,cor,icone])=>'<div class="mod2-kpi" style="--kpi-cor:'+cor+'"><span class="mod2-kpi-icon">'+({'layers':'▤','package':'▣','check-circle':'✓','clock':'◷','alert-triangle':'⚠','users':'♟'}[icone])+'</span><div><span>'+esc(nome)+'</span><strong>'+numero+'</strong></div></div>').join('');
  const total=recorte.length;
  const cores=grupos.map(([ch,,,cor])=>({ch,cor,n:contagens[ch]}));
  let acc=0;
