@@ -98,6 +98,36 @@ body.admin-layout header{padding-left:270px}
  main:has(#app.layout-admin){margin:0;max-width:none;padding:0}
  body:has(#app.layout-admin) header{padding-left:16px}
 }
+
+/* Correção mobile definitiva do painel administrativo */
+@media screen and (max-width:800px){
+ html,body{width:100%;max-width:100%;overflow-x:hidden}
+ body.admin-layout{margin:0!important}
+ body.admin-layout header{width:100%!important;max-width:100%!important;padding:10px 12px!important;margin:0!important}
+ body.admin-layout header .marca-topo{display:flex!important;flex-wrap:nowrap;gap:8px;align-items:center}
+ body.admin-layout header .logo-header{width:85px!important;max-width:85px!important;height:50px!important}
+ body.admin-layout header h1{font-size:16px!important}
+ body.admin-layout header small{font-size:10px!important}
+ body.admin-layout main{display:block!important;position:relative!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:10px!important;left:auto!important;right:auto!important;transform:none!important}
+ body.admin-layout #app,body.admin-layout #app section,body.admin-layout #dashboardAdmin,body.admin-layout #dashboardAdmin>.card,body.admin-layout .dash-cols,body.admin-layout .card{width:100%!important;max-width:100%!important;min-width:0!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important}
+ body.admin-layout #dashMetricas{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+ body.admin-layout #dashMetricas .metric{min-width:0!important;overflow-wrap:anywhere;font-size:12px;padding:10px}
+ body.admin-layout .dash-cols{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ body.admin-layout .dash-titulo{flex-wrap:wrap;gap:8px}
+ body.admin-layout .dash-titulo h2{font-size:16px}
+ body.admin-layout .logo-dash{width:80px;height:46px}
+ body.admin-layout #menuAdmin{position:fixed!important;left:0!important;top:0!important;bottom:0!important;right:auto!important;width:min(280px,85vw)!important;max-width:85vw!important;max-height:100dvh!important;z-index:9999!important;margin:0!important;transform:translateX(-110%)!important;visibility:hidden!important;pointer-events:none!important;transition:transform .2s ease,visibility .2s ease!important}
+ body.admin-layout #menuAdmin.menu-aberto{transform:translateX(0)!important;visibility:visible!important;pointer-events:auto!important}
+ body.admin-layout #abrirMenuAdmin:not(.hidden){display:inline-flex!important;position:relative!important;z-index:1;margin:0 0 10px!important}
+ body.admin-layout #fecharMenuAdmin{display:block!important;position:sticky;top:0;z-index:1}
+ body.admin-layout #app>.buttons{display:flex;flex-wrap:wrap;gap:8px}
+ body.admin-layout .card{padding:12px!important}
+ body.admin-layout .buttons button{max-width:100%}
+}
+@media screen and (max-width:380px){
+ body.admin-layout #dashMetricas{grid-template-columns:minmax(0,1fr)!important}
+ body.admin-layout .dash-titulo .logo-dash{display:none}
+}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><div class="marca-topo"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes" class="logo-header"><div><h1>Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></div></div></header><main>
 <div id="login" class="card"><div class="login-marca"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="Logomarca ZZIPING Uniformes" class="logo-login"></div><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
