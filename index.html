@@ -128,11 +128,42 @@ body.admin-layout header{padding-left:270px}
  body.admin-layout #dashMetricas{grid-template-columns:minmax(0,1fr)!important}
  body.admin-layout .dash-titulo .logo-dash{display:none}
 }
+
+/* Dashboard Mod 2, somente administrador */
+.mod2-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mod2-head h2{margin:0}.mod2-head p{margin:5px 0}.mod2-head label{min-width:190px}
+#dashSeletor{display:flex;align-items:center;gap:14px;padding:12px 16px}#dashSeletor select{width:auto;min-width:220px;margin:0}
+.mod2-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0}
+.mod2-kpi{background:color-mix(in srgb,var(--kpi-cor) 12%,white);border:1px solid color-mix(in srgb,var(--kpi-cor) 18%,white);border-radius:13px;padding:16px 12px;display:flex;align-items:center;gap:10px;min-width:0}
+.mod2-kpi-icon{background:color-mix(in srgb,var(--kpi-cor) 15%,white);border-radius:50%;width:40px;height:40px;display:grid;place-items:center;font-size:25px;color:var(--kpi-cor);flex-shrink:0}
+.mod2-kpi span:not(.mod2-kpi-icon){font-size:13px;font-weight:650;color:var(--kpi-cor);display:block}
+.mod2-kpi strong{display:block;font-size:30px;color:var(--kpi-cor)}
+.mod2-duas{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mod2-duas>.card{min-width:0}
+.mod2-status{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.mod2-anel{width:210px;height:210px;max-width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.mod2-anel>div{width:60%;height:60%;background:white;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mod2-anel strong{font-size:31px}.mod2-anel span{font-size:12px}
+.mod2-legenda{flex:1;min-width:165px}.mod2-legenda>div{display:flex;align-items:center;gap:7px;border-bottom:1px solid #eee;padding:9px 0;font-size:13px}.mod2-legenda b{margin-left:auto;white-space:nowrap}.mod2-ponto{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.mod2-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px}.mod2-titulo h2{margin:0}.mod2-titulo button{font-size:12px;padding:6px 10px}
+.mod2-servico{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-bottom:1px solid #eee;font-size:13px}.mod2-servico>div{min-width:0;overflow-wrap:anywhere}.mod2-servico small{display:block;color:#6b7280;margin-top:3px}
+.mod2-tag{border-radius:20px;padding:5px 9px;white-space:nowrap;font-size:11px;font-weight:700}
+.mod2-tag.concluido{background:#dff6e5;color:#117b32}.mod2-tag.andamento{background:#e2edff;color:#2056bc}.mod2-tag.aguardando{background:#fff1d5;color:#956000}.mod2-tag.atrasado{background:#ffe1e4;color:#c21d2c}
+.mod2-alerta{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #eee}.mod2-alerta>span{font-size:22px;color:#d42130}.mod2-alerta>div{flex:1;min-width:0}.mod2-alerta b,.mod2-alerta small{display:block}.mod2-alerta small{color:#6b7280}.mod2-alerta button{padding:7px 10px;font-size:12px}
+.mod2-acoes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(max-width:1250px){.mod2-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1000px){.mod2-duas{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:800px){.mod2-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mod2-duas{grid-template-columns:minmax(0,1fr)!important}#dashSeletor{display:block}#dashSeletor select{width:100%;margin-top:5px}.mod2-anel{width:170px;height:170px}}
+@media(max-width:380px){.mod2-kpis{grid-template-columns:minmax(0,1fr)}.mod2-acoes{grid-template-columns:minmax(0,1fr)}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><div class="marca-topo"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes" class="logo-header"><div><h1>Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></div></div></header><main>
 <div id="login" class="card"><div class="login-marca"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="Logomarca ZZIPING Uniformes" class="logo-login"></div><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
 <div id="app" class="hidden"><button id="abrirMenuAdmin" class="secondary hidden no-print" onclick="alternarMenuAdmin()" aria-label="Abrir menu administrativo" aria-expanded="false">☰ Menu</button><aside id="menuAdmin" class="hidden no-print" aria-label="Menu administrativo"><button id="fecharMenuAdmin" type="button" onclick="alternarMenuAdmin()" aria-label="Fechar menu">✕ &nbsp; Fechar menu</button><div class="admin-side-brand"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes"></div><div class="admin-side-label">NAVEGAÇÃO</div><button data-tab="painel" onclick="tab('painel')">▦ &nbsp; Dashboard</button><button data-tab="servicos" onclick="tab('servicos')">▤ &nbsp; Serviços</button><button data-tab="prestadores" onclick="tab('prestadores')">♟ &nbsp; Prestadores</button><button data-tab="relatorios" onclick="tab('relatorios')">▥ &nbsp; Relatórios</button><button data-tab="auditoria" onclick="tab('auditoria')">◴ &nbsp; Histórico</button><button data-tab="usuarios" onclick="tab('usuarios')">♙ &nbsp; Usuários</button><div class="admin-side-label admin-side-divider">AÇÕES RÁPIDAS</div><button class="admin-side-action" onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ &nbsp; Novo serviço</button><button class="admin-side-action" onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">＋ &nbsp; Novo prestador</button><button class="admin-side-action" onclick="tab('relatorios')">▤ &nbsp; Relatório do período</button><div class="admin-side-bottom"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING"></div></aside><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav id="navPadrao"><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button><button id="navUsuarios" class="hidden" onclick="tab('usuarios')">Usuários</button></nav><p id="status" class="muted"></p>
-<section id="painel"><div id="dashboardAdmin" class="hidden"><div class="card"><div class="dash-titulo"><h2>Dashboard administrativo · Visão geral</h2><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="ZZIPING Uniformes" class="logo-dash"></div><div class="buttons"><label>Período <select id="dashPeriodo" onchange="renderDashboard()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><button class="secondary" onclick="carregar()">Atualizar dados</button></div><div id="dashMetricas" class="grid"></div></div><div class="dash-cols"><div class="card"><h2>Produção por prestador</h2><div id="dashPrestadores"></div></div><div class="card"><h2>Alertas e prioridades</h2><div id="dashAlertas"></div></div></div><div class="card"><h2>Últimos serviços</h2><div id="dashRecentes"></div></div><div class="card"><h2>Ações rápidas</h2><div class="buttons"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">+ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">+ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">Relatórios</button><button class="secondary" onclick="tab('usuarios')">Usuários</button></div></div></div><div id="painelBasico"><div class="grid"><div class="metric">Serviços em aberto<strong id="nAbertos">0</strong></div><div class="metric">Serviços atrasados<strong id="nAtrasados">0</strong></div><div class="metric">Peças pendentes<strong id="nPecas">0</strong></div><div class="metric">Finalizados<strong id="nFinalizados">0</strong></div></div><div class="card"><h2>Serviços em aberto</h2><div id="pendentes"></div></div></div></section>
+<section id="painel"><div id="dashSeletor" class="card hidden no-print"><label for="dashModo">Modelo do painel</label><select id="dashModo" onchange="trocarDashboard(this.value)"><option value="1">Dashboard Mod 1 — Clássico</option><option value="2">Dashboard Mod 2 — Gerencial</option></select></div><div id="dashboardAdmin" class="hidden"><div class="card"><div class="dash-titulo"><h2>Dashboard administrativo · Visão geral</h2><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="ZZIPING Uniformes" class="logo-dash"></div><div class="buttons"><label>Período <select id="dashPeriodo" onchange="renderDashboard()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><button class="secondary" onclick="carregar()">Atualizar dados</button></div><div id="dashMetricas" class="grid"></div></div><div class="dash-cols"><div class="card"><h2>Produção por prestador</h2><div id="dashPrestadores"></div></div><div class="card"><h2>Alertas e prioridades</h2><div id="dashAlertas"></div></div></div><div class="card"><h2>Últimos serviços</h2><div id="dashRecentes"></div></div><div class="card"><h2>Ações rápidas</h2><div class="buttons"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">+ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">+ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">Relatórios</button><button class="secondary" onclick="tab('usuarios')">Usuários</button></div></div></div><div id="dashboardMod2" class="hidden">
+<div class="card mod2-head"><div><h2>▥ Dashboard — Visão Geral</h2><p class="muted">Produção, entregas e pendências em um só lugar.</p></div><label>Período<select id="mod2Periodo" onchange="renderDashboardMod2()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option></select></label></div>
+<div id="mod2Indicadores" class="mod2-kpis"></div>
+<div class="mod2-duas"><div class="card"><h2>◉ Serviços por status</h2><div id="mod2Status" class="mod2-status"></div></div><div class="card"><h2>↗ Evolução da produção</h2><p class="muted">Quantidade de serviços enviados por dia no período selecionado</p><div id="mod2Evolucao" class="mod2-evolucao"></div></div></div>
+<div class="mod2-duas"><div class="card"><div class="mod2-titulo"><h2>▤ Serviços recentes</h2><button class="secondary" onclick="tab('servicos')">Ver todos</button></div><div id="mod2Recentes"></div></div><div class="card"><h2>♧ Alertas e pendências</h2><div id="mod2Alertas"></div><h2>⚡ Ações rápidas</h2><div class="mod2-acoes"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">♟ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">▥ Relatórios</button><button class="secondary" onclick="tab('usuarios')">♙ Usuários</button></div></div></div>
+</div><div id="painelBasico"><div class="grid"><div class="metric">Serviços em aberto<strong id="nAbertos">0</strong></div><div class="metric">Serviços atrasados<strong id="nAtrasados">0</strong></div><div class="metric">Peças pendentes<strong id="nPecas">0</strong></div><div class="metric">Finalizados<strong id="nFinalizados">0</strong></div></div><div class="card"><h2>Serviços em aberto</h2><div id="pendentes"></div></div></div></section>
 <section id="prestadores" class="hidden"><div class="card"><h2>Cadastrar prestador</h2><form id="fp"><label>Nome<input name="nome" required></label><label>Telefone<input name="telefone" type="tel"></label><label>Endereço<input name="endereco"></label><label>Prazo padrão em dias<input name="prazo_dias" type="number" min="0" value="5" required></label><button>Cadastrar prestador</button></form></div><div class="card"><h2>Prestadores cadastrados</h2><div id="listaPrestadores"></div></div></section>
 <section id="servicos" class="hidden"><div class="card"><h2>Novo serviço</h2><form id="fs"><label>Prestador<select name="prestador_id" id="prestadorSelect" required></select></label><label>Descrição<input name="descricao" required></label><label>Quantidade de peças<input name="quantidade" type="number" min="1" required></label><label>Data de saída<input name="data_saida" id="saida" type="date" required></label><label>Previsão de devolução<input name="data_prevista" id="previsao" type="date" required></label><label>Observações<textarea name="observacoes"></textarea></label><button>Registrar saída</button></form></div><div class="card"><h2>Histórico de serviços</h2><div id="todos"></div></div></section>
 <section id="relatorios" class="hidden"><div class="card"><h2>Fechamento mensal por devolução</h2><p class="muted">Conta apenas as peças efetivamente devolvidas dentro do período, independentemente da data de envio.</p><form id="fr"><label>Prestador<select id="relPrestador"></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section><section id="auditoria" class="hidden"><div class="card"><h2>Histórico de operações</h2><p class="muted">Quem lançou, editou ou registrou devoluções. Os eventos começam após a ativação do SQL de auditoria.</p><div class="audit-filters">
@@ -145,7 +176,7 @@ body.admin-layout header{padding-left:270px}
 const URL_SUPABASE="https://uzlmqwzneovxemnpssab.supabase.co",CHAVE_PUBLICA="sb_publishable_X5qkawe4rlrznwCv-cLL6w_1T2Znw0J";
 const $=x=>document.getElementById(x);const today=()=>new Date().toLocaleDateString('en-CA');const fmt=x=>x?x.split('-').reverse().join('/'):'';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let client,p=[],s=[],b=[],session=null,tabAtual='painel',adminPrincipal=false;
+let client,p=[],s=[],b=[],session=null,tabAtual='painel',adminPrincipal=false,dashboardModo='1';
 function status(t,erro=false){$('status').className=erro?'error':'muted';$('status').textContent=t}
 function addDays(v,n){let d=new Date(v+'T12:00:00');d.setDate(d.getDate()+Number(n));return d.toLocaleDateString('en-CA')}
 function pendente(v){return v.quantidade-b.filter(x=>x.servico_id===v.id).reduce((t,x)=>t+x.quantidade,0)}
@@ -164,6 +195,70 @@ async function excluirRegistro(t,id){
  if(t==='auditoria_operacoes')await carregarAuditoria();
  alert('Registro excluído.');
 }
+
+function trocarDashboard(modo){
+ if(!adminPrincipal)return;
+ dashboardModo=modo==='2'?'2':'1';
+ try{localStorage.setItem('zziping_dashboard_modo',dashboardModo)}catch(e){}
+ atualizarDashboards();
+}
+function atualizarDashboards(){
+ $('dashSeletor').classList.toggle('hidden',!adminPrincipal);
+ $('dashboardAdmin').classList.toggle('hidden',!adminPrincipal||dashboardModo!=='1');
+ $('dashboardMod2').classList.toggle('hidden',!adminPrincipal||dashboardModo!=='2');
+ $('painelBasico').classList.toggle('hidden',adminPrincipal);
+ $('dashModo').value=dashboardModo;
+ if(adminPrincipal&&dashboardModo==='2')renderDashboardMod2();
+}
+function mod2Categoria(v){
+ const q=pendente(v);
+ if(q<=0)return 'concluido';
+ if(v.data_prevista<today())return 'atrasado';
+ if(b.some(x=>x.servico_id===v.id))return 'aguardando';
+ return 'andamento';
+}
+function renderDashboardMod2(){
+ if(!adminPrincipal)return;
+ const periodo=$('mod2Periodo').value;
+ const limite=periodo==='all'?'0000-01-01':new Date(Date.now()-Number(periodo)*86400000).toISOString().slice(0,10);
+ const recorte=s.filter(v=>v.data_saida>=limite);
+ const grupos=[['andamento','Em andamento','layers','#2563eb'],['concluido','Concluídos','check-circle','#13843a'],['aguardando','Devolução parcial','clock','#e99a0c'],['atrasado','Atrasados','alert-triangle','#e12632']];
+ const contagens=Object.fromEntries(grupos.map(([ch])=>[ch,recorte.filter(v=>mod2Categoria(v)===ch).length]));
+ const ativos=p.filter(v=>v.ativo).length;
+ const kpis=[...grupos.map(([ch,n,icone,cor])=>[n,contagens[ch],cor,icone]),['Prestadores ativos',ativos,'#6d3bba','users']];
+ $('mod2Indicadores').innerHTML=kpis.map(([nome,numero,cor,icone])=>'<div class="mod2-kpi" style="--kpi-cor:'+cor+'"><span class="mod2-kpi-icon">'+({'layers':'▤','check-circle':'✓','clock':'◷','alert-triangle':'⚠','users':'♟'}[icone])+'</span><div><span>'+esc(nome)+'</span><strong>'+numero+'</strong></div></div>').join('');
+ const total=recorte.length;
+ const cores=grupos.map(([ch,,,cor])=>({ch,cor,n:contagens[ch]}));
+ let acc=0;
+ const partes=cores.map(v=>{const inicio=acc;acc+=total?v.n/total*100:0;return v.cor+' '+inicio+'% '+acc+'%'}).join(',');
+ $('mod2Status').innerHTML='<div class="mod2-anel" style="background:'+(total?'conic-gradient('+partes+')':'#e9eaee')+'"><div><strong>'+total+'</strong><span>Serviços</span></div></div><div class="mod2-legenda">'+grupos.map(([ch,n,,cor])=>'<div><span class="mod2-ponto" style="background:'+cor+'"></span><span>'+n+'</span><b>'+contagens[ch]+' ('+(total?Math.round(contagens[ch]/total*100):0)+'%)</b></div>').join('')+'</div>';
+ // Evolução: contagem diária de serviços enviados (não inventar tendência em dias sem dados).
+ const dias={};
+ for(const v of recorte)if(v.data_saida) dias[v.data_saida]=(dias[v.data_saida]||0)+1;
+ const datas=Object.keys(dias).sort();
+ let pontos=[];
+ if(periodo!=='all'){
+   const n=Number(periodo),hoje=new Date();
+   for(let i=n-1;i>=0;i--){const d=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()-i);pontos.push([d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),0])}
+   pontos=pontos.map(([d])=>[d,dias[d]||0]);
+ }else pontos=datas.map(d=>[d,dias[d]]);
+ if(!pontos.length){$('mod2Evolucao').innerHTML='<p class="muted">Sem serviços enviados neste período.</p>'}
+ else{
+   const largura=620,altura=230,esq=32,topo=16,base=196,max=Math.max(1,...pontos.map(v=>v[1]));
+   const coords=pontos.map((v,i)=>[esq+(pontos.length===1?.5:i/(pontos.length-1))*(largura-esq-12),base-(v[1]/max)*(base-topo)]);
+   const linha=coords.map(v=>v.join(',')).join(' ');
+   const area=esq+','+base+' '+linha+' '+coords[coords.length-1][0]+','+base;
+   const marcas=[0,1,2,3,4].map(i=>{const y=base-i*(base-topo)/4;return '<line x1="'+esq+'" y1="'+y+'" x2="'+(largura-10)+'" y2="'+y+'" stroke="#e9e9ef"/><text x="2" y="'+(y+4)+'" font-size="11" fill="#68758a">'+Math.round(max*i/4)+'</text>'}).join('');
+   const etiquetas=[0,Math.floor((pontos.length-1)/2),pontos.length-1].filter((v,i,a)=>a.indexOf(v)===i).map(i=>'<text x="'+coords[i][0]+'" y="220" text-anchor="middle" font-size="11" fill="#68758a">'+fmt(pontos[i][0]).slice(0,5)+'</text>').join('');
+   $('mod2Evolucao').innerHTML='<svg viewBox="0 0 620 230" role="img" aria-label="Gráfico de serviços enviados por dia" style="width:100%;height:auto"><polygon points="'+area+'" fill="#fce2e5"/>'+marcas+'<polyline points="'+linha+'" fill="none" stroke="#d71f32" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'+etiquetas+'</svg>';
+ }
+ $('mod2Recentes').innerHTML='<div class="mod2-tabela">'+s.slice(0,7).map(v=>{const categoria=mod2Categoria(v),pr=p.find(x=>x.id===v.prestador_id);const nomes={concluido:'Concluído',andamento:'Em andamento',aguardando:'Devolução parcial',atrasado:'Atrasado'};return '<div class="mod2-servico"><div><b>'+esc(v.descricao)+'</b><small>'+esc(pr?.nome||'Prestador')+' · '+fmt(v.data_saida)+' · '+v.quantidade+' peça(s)</small></div><span class="mod2-tag '+categoria+'">'+nomes[categoria]+'</span></div>'}).join('')+'</div>'||'<p class="muted">Nenhum serviço.</p>';
+ const vencidos=s.filter(v=>mod2Categoria(v)==='atrasado');
+ const parciais=s.filter(v=>mod2Categoria(v)==='aguardando');
+ const pecas=s.filter(v=>pendente(v)>0).reduce((a,v)=>a+pendente(v),0);
+ $('mod2Alertas').innerHTML='<div class="mod2-alerta"><span>⚠</span><div><b>'+vencidos.length+' serviço(s) atrasado(s)</b><small>Prazo de devolução ultrapassado</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div><div class="mod2-alerta"><span>◷</span><div><b>'+parciais.length+' devolução(ões) parcial(is)</b><small>Serviços com peças ainda pendentes</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div><div class="mod2-alerta"><span>▤</span><div><b>'+pecas+' peça(s) pendente(s)</b><small>Saldo total em aberto</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div>';
+}
+
 function renderDashboard(){
  if(!adminPrincipal)return;
  const periodo=$('dashPeriodo').value,limite=periodo==='all'?'0000-01-01':new Date(Date.now()-Number(periodo)*86400000).toISOString().slice(0,10);
@@ -178,7 +273,7 @@ function renderDashboard(){
  $('dashRecentes').innerHTML=s.slice(0,8).map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';
 }
 function descricao(v){let pr=p.find(x=>x.id===v.prestador_id),q=pendente(v),atrasado=q>0&&v.data_prevista<today();return '<div class="line"><b>'+esc(pr?.nome||'Prestador')+'</b> '+(atrasado?'<span class="badge danger">Atrasado</span>':q===0?'<span class="badge">Finalizado</span>':'')+'<div>'+esc(v.descricao)+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Prazo: '+fmt(v.data_prevista)+' · '+q+' de '+v.quantidade+' peças pendentes</div>'+'<p class="buttons">'+(q?'<button class="secondary" onclick="darBaixa(\''+v.id+'\')">Dar baixa</button>':'')+'<button class="secondary" onclick="editarServico(\''+v.id+'\')">Editar serviço</button>'+botaoExcluir('servicos',v.id)+'</p></div>'}
-function render(){options();$('dashboardAdmin').classList.toggle('hidden',!adminPrincipal);$('painelBasico').classList.toggle('hidden',adminPrincipal);const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button>'+botaoExcluir('prestadores',v.id)+'</p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>';renderDashboard()}
+function render(){options();atualizarDashboards();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button>'+botaoExcluir('prestadores',v.id)+'</p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>';renderDashboard()}
 async function carregar(){status('Sincronizando dados...');try{const [a,c,d]=await Promise.all([client.from('prestadores').select('*').order('nome'),client.from('servicos').select('*').order('criado_em',{ascending:false}),client.from('baixas').select('*').order('registrado_em',{ascending:false})]);for(const r of [a,c,d])if(r.error)throw r.error;p=a.data||[];s=c.data||[];b=d.data||[];render();status('Dados sincronizados com Supabase.')}catch(e){status('Falha ao carregar: '+e.message,true)}}
 function tab(id){if(id==='usuarios'&&!adminPrincipal)return;tabAtual=id;atualizarMenuAdmin();for(const a of ['painel','servicos','prestadores','relatorios','auditoria','usuarios'])$(a).classList.toggle('hidden',a!==id);carregar();if(id==='auditoria')carregarAuditoria();if(id==='usuarios'&&adminPrincipal)carregarUsuarios()}
 function alternarMenuAdmin(){
@@ -209,7 +304,7 @@ async function mostrar(sess){
  if(!sess)return;
  $('usuario').textContent=sess.user.email;$('senha').value='';
  const {data:admin,error}=await client.rpc('zziping_admin_principal');
- if(!error&&admin===true){adminPrincipal=true;$('navUsuarios').classList.remove('hidden')}
+ if(!error&&admin===true){adminPrincipal=true;$('navUsuarios').classList.remove('hidden');try{dashboardModo=localStorage.getItem('zziping_dashboard_modo')==='2'?'2':'1'}catch(e){}}
  aplicarLayoutAdmin();
  await carregar();
 }
