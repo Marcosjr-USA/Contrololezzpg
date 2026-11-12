@@ -326,7 +326,7 @@ async function mostrar(sess){
  $('usuario').textContent=sess.user.email;$('senha').value='';
  const {data:admin,error}=await client.rpc('zziping_admin_principal');
  dashboardModo='2';
- if(!error&&admin===true){adminPrincipal=true;$('navUsuarios').classList.remove('hidden');}
+ if(!error&&admin===true){adminPrincipal=true;$('navUsuarios').classList.remove('hidden');$('menuUsuarios').classList.remove('hidden');}
  tabAtual='painel';
  for(const sec of ['painel','pesquisa','servicos','prestadores','relatorios','auditoria','usuarios'])$(sec).classList.toggle('hidden',sec!=='painel');
  aplicarLayoutAdmin();
