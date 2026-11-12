@@ -132,7 +132,7 @@ function openCheck(id){
  }).join('');
  $('checkrows').querySelectorAll('[data-size]').forEach(row=>{
   const good=row.querySelector('.goodqty'),bad=row.querySelector('.badqty'),reserve=row.querySelector('.reserveqty');
-  good.oninput=()=>{reserve.max=String(Math.min(Number(reserve.max)||0,Number(good.value)||0));if(Number(reserve.value)>Number(good.value))reserve.value=good.value};
+  good.oninput=()=>{const t=tamanhos.find(x=>x.id===row.dataset.size),st=totals(t.id);reserve.max=String(Math.min(Math.max(0,cutReserve(t.id)-st.reserve),Number(good.value)||0));if(Number(reserve.value)>Number(reserve.max))reserve.value=reserve.max};
   bad.oninput=()=>{};
  });
  $('checkdialog').showModal();
