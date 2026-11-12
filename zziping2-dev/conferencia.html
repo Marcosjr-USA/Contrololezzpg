@@ -1,0 +1,176 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 • Conferência Final</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#232a35}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:#fff;border-bottom:4px solid #be1c30;padding:17px 5%}h1{margin:0;font-size:23px}header small{color:#cbd0d5}.shell{max-width:1100px;margin:auto;padding:12px}.card{background:white;border:1px solid #e0e2e8;border-radius:12px;padding:18px;margin:12px 0}.note{background:#fff2d9;border:1px solid #eed18b;padding:12px;border-radius:8px;font-size:14px}button,.button{border:0;border-radius:8px;background:#b61b30;color:#fff;min-height:42px;padding:10px 15px;cursor:pointer;font:inherit;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}button.secondary,.button.secondary{background:#e8ebef;color:#25303a}button:disabled{opacity:.53;cursor:not-allowed}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}select,input,textarea{display:block;padding:10px;width:100%;border-radius:8px;border:1px solid #cbd0da;min-height:42px;font:inherit;background:white;margin:5px 0 12px}label{font-size:14px;font-weight:600;display:block}.hidden{display:none!important}.muted{font-size:13px;color:#647080}.error{color:#bd2134}.ok{color:#187843}.pill{background:#fce8ea;color:#a01f2f;padding:5px 9px;font-size:12px;font-weight:700;border-radius:30px}.pill.okpill{background:#ddf2e4;color:#0d6d39}.summary{display:flex;flex-wrap:wrap;gap:10px}.metric{padding:10px;background:#f5edf0;border-radius:9px;min-width:100px}.metric b{font-size:21px;display:block}h2{font-size:20px;margin:4px 0 14px}h3{font-size:17px}.product{border:1px solid #dce1e7;border-radius:10px;padding:15px;margin:12px 0}.item{padding:8px 0;border-top:1px solid #ebedf0}.line{font-size:14px;overflow-wrap:anywhere}dialog{width:min(850px,calc(100% - 18px));max-height:90vh;border:1px solid #cbd0d8;border-radius:13px;padding:18px}dialog::backdrop{background:#111a27a6}.grade-row{padding:12px;border:1px solid #e2e6ec;border-radius:9px;margin:9px 0}.grade-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grade-inputs input{margin-bottom:0}.foot{font-size:12px;color:#66717d;margin:25px 0}#notice{white-space:pre-wrap}.reason{background:#f9f2e4;border-left:3px solid #d69c32;padding:9px;margin:8px 0;font-size:13px}
+@media(max-width:650px){h1{font-size:19px}.shell{padding:8px}.card{padding:13px}.grid{grid-template-columns:1fr}.grade-inputs{grid-template-columns:1fr 1fr}.metric{flex:1}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
+<header><div class="top"><div><h1>ZZIPING 2.0 • Conferência Final</h1><small>Módulo 4 — Quantidades aprovadas, defeitos e reservas</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
+<main class="shell"><p class="note">A conferência acontece após os retornos aprovados do <b>último processo de cada produto</b>. Somente peças aprovadas na conferência podem completar as quantidades vendidas. Esta versão não controla entrega ao cliente nem pagamentos.</p>
+<div id="notice" role="status" aria-live="polite"></div>
+<div class="card top"><a class="button secondary" href="producao.html">← Controle da produção</a><span id="identity" class="muted">Verificando acesso...</span><button id="reload" class="secondary">Atualizar</button></div>
+<section id="blocked" class="card hidden"><h2>Não foi possível abrir</h2><p id="blockedtext">Entre na ZZIPING 2.0 para continuar.</p><a href="index.html" class="button">Abrir login</a></section>
+<section id="work" class="hidden"><div class="card"><h2>Conferência dos pedidos</h2>
+<label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div>
+<div class="summary"><div class="metric">Peças vendidas<b id="sold">0</b></div><div class="metric">Aprovadas na conferência<b id="accepted">0</b></div><div class="metric">Pendentes<b id="pending">0</b></div><div class="metric">Defeituosas<b id="defective">0</b></div><div class="metric">Reservas utilizadas<b id="used">0</b></div></div>
+<p id="finishhint" class="muted"></p><button id="finish">Aprovar conclusão do pedido</button></div>
+<div class="card"><h2>Produtos por tamanho</h2><div id="products"></div></div>
+<div class="card"><h2>Histórico de conferências</h2><div id="history"></div></div></section>
+<dialog id="checkdialog"><div class="top"><h2 id="checktitle">Conferir produto</h2><button class="secondary" type="button" id="closecheck">Fechar</button></div>
+<p class="muted">O padrão aprova as peças vendidas ainda pendentes, desde que já tenham retornado aprovadas do último processo. Se houver defeito ou peça de reserva usada, altere as quantidades antes de salvar.</p>
+<form id="checkform"><div id="checkrows"></div><label>Observações sobre conferência/defeitos<input name="observacoes" maxlength="500" placeholder="Ex.: defeito detectado, reposição com reserva"></label>
+<div class="actions"><button id="savecheck" type="submit">Registrar conferência</button><button id="cancelcheck" type="button" class="secondary">Cancelar</button></div></form></dialog>
+<p class="foot">ZZIPING 2.0 — Desenvolvimento isolado da versão 1.0. Registros de conferência não podem ser apagados pelo painel. Reprocessamento de defeitos será desenvolvido em etapa própria.</p>
+</main><script>
+'use strict';
+const SB_URL='https://clgsozqaahxiwunvrkra.supabase.co';
+const SB_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let db=null,profile=null,permission=null,canWrite=false,selectedProduct=null;
+let pedidos=[],produtos=[],tamanhos=[],etapas=[],movimentos=[],retornos=[],cortes=[],conferencias=[];
+const show=(id,on)=>$(id).classList.toggle('hidden',!on);
+function note(text,error=false){$('notice').textContent=text||'';$('notice').className=error?'error':'ok'}
+async function table(name){const {data,error}=await db.from(name).select('*');if(error)throw error;return data||[]}
+function lastStep(prodId){return etapas.filter(x=>x.produto_id===prodId).sort((a,b)=>b.ordem-a.ordem)[0]}
+function finalAvailable(sizeId){
+ const t=tamanhos.find(x=>x.id===sizeId),step=lastStep(t?.produto_id);
+ if(!step||step.ordem<=1)return 0;
+ const ids=movimentos.filter(m=>m.processo_id===step.id&&m.produto_tamanho_id===sizeId).map(x=>x.id);
+ return retornos.filter(x=>ids.includes(x.movimentacao_id)).reduce((sum,x)=>sum+x.quantidade_aprovada,0);
+}
+function totals(sizeId){
+ const records=conferencias.filter(c=>c.produto_tamanho_id===sizeId);
+ const accepted=records.reduce((a,c)=>a+c.quantidade_aprovada,0);
+ const defective=records.reduce((a,c)=>a+c.quantidade_defeituosa,0);
+ const reserve=records.reduce((a,c)=>a+c.quantidade_reserva_utilizada,0);
+ return {accepted,defective,reserve,available:Math.max(0,finalAvailable(sizeId)-accepted-defective)};
+}
+function cutReserve(sizeId){return cortes.filter(c=>c.produto_tamanho_id===sizeId).reduce((a,c)=>a+c.quantidade_reserva,0)}
+async function init(){
+ try{
+  if(!window.supabase?.createClient)throw Error('Biblioteca Supabase não carregou.');
+  db=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+  const {data:{session},error}=await db.auth.getSession();if(error)throw error;
+  if(!session){show('blocked',true);return}
+  const [u,p]=await Promise.all([db.from('usuarios').select('*').eq('id',session.user.id).maybeSingle(),db.from('permissoes_usuario').select('*').eq('usuario_id',session.user.id).maybeSingle()]);
+  if(u.error)throw u.error;if(p.error)throw p.error;
+  profile=u.data;permission=p.data;
+  if(!profile?.ativo||!(profile.papel==='administrador'||permission?.conferencia_visualizar)){
+   show('blocked',true);$('blockedtext').textContent='Sua conta não tem permissão para consultar conferências.';return;
+  }
+  canWrite=profile.papel==='administrador'||!!permission?.conferencia_operar;
+  $('identity').textContent=profile.nome+(canWrite?' · Conferência autorizada':' · Consulta');
+  show('work',true);
+  await load();
+ }catch(e){show('blocked',true);$('blockedtext').textContent='Erro ao carregar: '+(e?.message||e);note(e.message,true)}
+}
+async function load(notify=false){
+ const chosen=$('order').value;
+ try{
+  [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias]=await Promise.all(
+   ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais'].map(table));
+  pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
+  $('order').innerHTML='<option value="">Selecione um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
+  $('order').value=pedidos.some(p=>p.id===chosen)?chosen:(pedidos[0]?.id||'');
+  render();
+  if(notify)note('Conferência atualizada com o banco de desenvolvimento.');
+ }catch(e){note('Falha ao consultar dados: '+(e?.message||e),true)}
+}
+function render(){
+ const order=pedidos.find(p=>p.id===$('order').value);
+ $('ordermeta').innerHTML=order?'<p><strong>Pedido '+esc(order.numero_externo)+'</strong> · '+esc(order.prioridade)+' · '+esc(order.status)+' · Prazo '+esc(order.prazo_entrega)+'</p>':'<p class="muted">Nenhum pedido disponível.</p>';
+ const ps=produtos.filter(p=>p.pedido_id===order?.id);
+ let sold=0,accepted=0,defective=0,used=0,rowsCount=0;
+ for(const p of ps)for(const t of tamanhos.filter(x=>x.produto_id===p.id)){
+  const state=totals(t.id);sold+=t.quantidade_vendida;accepted+=state.accepted;defective+=state.defective;used+=state.reserve;rowsCount++;
+ }
+ $('sold').textContent=sold;$('accepted').textContent=accepted;
+ $('pending').textContent=Math.max(0,sold-accepted);
+ $('defective').textContent=defective;$('used').textContent=used;
+ const ready=!!order&&order.status==='em_producao'&&rowsCount>0&&accepted===sold;
+ $('finish').disabled=!canWrite||!ready;
+ $('finish').classList.toggle('hidden',order?.status==='pronto');
+ $('finishhint').textContent=order?.status==='pronto'?'Pedido pronto! Todas as quantidades vendidas passaram pela conferência final.':
+  ready?'Todas as quantidades vendidas foram aprovadas. Você pode concluir o pedido.':
+  'A conclusão fica disponível quando todas as peças vendidas de todos os tamanhos estiverem aprovadas na conferência.';
+ $('products').innerHTML=ps.map(p=>{
+  const ss=tamanhos.filter(t=>t.produto_id===p.id);
+  const sum=ss.reduce((a,t)=>a+totals(t.id).accepted,0);
+  const soldP=ss.reduce((a,t)=>a+t.quantidade_vendida,0);
+  const list=ss.map(t=>{
+   const a=totals(t.id);const missing=Math.max(0,t.quantidade_vendida-a.accepted);
+   return '<div class="item"><strong>'+esc(t.tamanho)+'</strong> · Vendidas: '+t.quantidade_vendida+
+   ' · Etapa final aprovada: '+finalAvailable(t.id)+' · Conferência aprovada: '+a.accepted+
+   ' · Pendentes: '+missing+' · Defeitos: '+a.defective+' · Reservas usadas: '+a.reserve+'</div>';
+  }).join('');
+  return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+'</h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
+   '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+'</p>'+list+
+   (canWrite&&order?.status==='em_producao'&&sum<soldP?'<button type="button" class="secondary" data-check="'+esc(p.id)+'">Conferir produto</button>':'')+'</div>';
+ }).join('')||'<p class="muted">Sem produtos cadastrados.</p>';
+ const ids=new Set(tamanhos.filter(t=>ps.some(p=>p.id===t.produto_id)).map(t=>t.id));
+ $('history').innerHTML=conferencias.filter(c=>ids.has(c.produto_tamanho_id)).sort((a,b)=>b.conferido_em.localeCompare(a.conferido_em)).map(c=>{
+  const t=tamanhos.find(x=>x.id===c.produto_tamanho_id),p=produtos.find(x=>x.id===t?.produto_id);
+  return '<div class="item"><strong>'+esc(p?.descricao)+' · '+esc(t?.tamanho)+'</strong> · Aprovadas: '+c.quantidade_aprovada+
+    ' · Defeituosas: '+c.quantidade_defeituosa+' · Reserva usada: '+c.quantidade_reserva_utilizada+
+    '<div class="muted">Conferido em '+new Date(c.conferido_em).toLocaleString('pt-BR')+(c.observacoes?' · '+esc(c.observacoes):'')+'</div></div>';
+ }).join('')||'<p class="muted">Nenhuma conferência registrada para este pedido.</p>';
+}
+function openCheck(id){
+ const p=produtos.find(x=>x.id===id);if(!p)return;selectedProduct=id;
+ $('checktitle').textContent='Conferir · '+p.descricao;
+ $('checkform').reset();
+ $('checkrows').innerHTML=tamanhos.filter(t=>t.produto_id===id).map(t=>{
+  const st=totals(t.id),pending=Math.max(0,t.quantidade_vendida-st.accepted);
+  const recommended=Math.min(pending,st.available);
+  const reserveFree=Math.max(0,cutReserve(t.id)-st.reserve);
+  return '<div class="grade-row" data-size="'+esc(t.id)+'"><strong>Tamanho '+esc(t.tamanho)+'</strong>'+
+   '<p class="muted">Vendidas: '+t.quantidade_vendida+' · Faltam aprovar: '+pending+' · Disponíveis após última etapa: '+st.available+
+   ' · Reserva cortada ainda não usada: '+reserveFree+'</p><div class="grade-inputs">'+
+   '<label>Aprovar<input class="goodqty" type="number" min="0" max="'+Math.min(pending,st.available)+'" value="'+recommended+'" required></label>'+
+   '<label>Defeituosas<input class="badqty" type="number" min="0" max="'+st.available+'" value="0" required></label>'+
+   '<label>Reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="0" required></label>'+
+   '</div></div>';
+ }).join('');
+ $('checkrows').querySelectorAll('[data-size]').forEach(row=>{
+  const good=row.querySelector('.goodqty'),bad=row.querySelector('.badqty'),reserve=row.querySelector('.reserveqty');
+  good.oninput=()=>{reserve.max=String(Math.min(Number(reserve.max)||0,Number(good.value)||0));if(Number(reserve.value)>Number(good.value))reserve.value=good.value};
+  bad.oninput=()=>{};
+ });
+ $('checkdialog').showModal();
+}
+$('order').onchange=render;
+$('reload').onclick=()=>load(true);
+$('products').onclick=e=>{const btn=e.target.closest('[data-check]');if(btn)openCheck(btn.dataset.check)};
+$('closecheck').onclick=$('cancelcheck').onclick=()=>$('checkdialog').close();
+$('checkform').onsubmit=async e=>{
+ e.preventDefault();const form=e.target,btn=$('savecheck');btn.disabled=true;btn.textContent='Salvando...';
+ try{
+  const itens=[...$('checkrows').querySelectorAll('[data-size]')].map(row=>{
+   const st=totals(row.dataset.size);
+   const t=tamanhos.find(x=>x.id===row.dataset.size);
+   const aprovadas=Number(row.querySelector('.goodqty').value);
+   const defeituosas=Number(row.querySelector('.badqty').value);
+   const reservas=Number(row.querySelector('.reserveqty').value);
+   const maxRes=cutReserve(t.id)-st.reserve;
+   if(![aprovadas,defeituosas,reservas].every(v=>Number.isInteger(v)&&v>=0)||
+      aprovadas>t.quantidade_vendida-st.accepted||
+      aprovadas+defeituosas>st.available||reservas>aprovadas||reservas>maxRes)
+      throw Error('Quantidades inválidas no tamanho '+t.tamanho+'. Verifique o saldo aprovado na última etapa.');
+   return {tamanho_id:t.id,aprovadas,defeituosas,reservas_utilizadas:reservas};
+  });
+  if(!itens.some(x=>x.aprovadas+x.defeituosas>0))throw Error('Ainda não existem novas peças disponíveis para conferir.');
+  const {data,error}=await db.rpc('zz2_registrar_conferencia_lote',{p_produto_id:selectedProduct,p_itens:itens,p_observacoes:form.elements.observacoes.value.trim()||null});
+  if(error)throw error;
+  $('checkdialog').close();await load();note('Conferência registrada: '+data+' peça(s) aprovada(s).');
+ }catch(err){note(err.message,true)}finally{btn.disabled=false;btn.textContent='Registrar conferência'}
+};
+$('finish').onclick=async()=>{
+ const order=pedidos.find(p=>p.id===$('order').value);if(!order)return;
+ if(!confirm('Aprovar a conferência final do pedido '+order.numero_externo+'? O pedido será marcado como PRONTO para produção.'))return;
+ const btn=$('finish');btn.disabled=true;btn.textContent='Finalizando...';
+ try{
+  const {error}=await db.rpc('zz2_finalizar_pedido',{p_pedido_id:order.id});if(error)throw error;
+  await load();note('Pedido '+order.numero_externo+' finalizado: todas as peças vendidas foram aprovadas.');
+ }catch(err){note(err.message,true)}finally{btn.disabled=false;btn.textContent='Aprovar conclusão do pedido'}
+};
+init();
+</script></body></html>
