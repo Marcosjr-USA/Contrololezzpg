@@ -1,0 +1,189 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 • Produção</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#1f2630}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:white;border-bottom:4px solid #bc1c30;padding:16px 5%}h1{margin:0;font-size:23px}header small{color:#c9cbd0}.shell{max-width:1100px;margin:auto;padding:13px}.card{background:white;padding:17px;border:1px solid #e0e3e8;border-radius:12px;margin:12px 0}.warn{background:#fff2d8;border:1px solid #edc578;border-radius:8px;padding:12px;font-size:14px}button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0;background:#b61b30;color:white;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;min-height:42px}button.secondary,.button.secondary{background:#e8ebef;color:#242b35}button:disabled{opacity:.5;cursor:not-allowed}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.muted{font-size:13px;color:#687281}.hidden{display:none!important}.good{color:#087a43}.error{color:#bc1b30}#notice{white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;font-weight:600}input,select,textarea{width:100%;padding:10px;min-height:41px;border:1px solid #c8cdd5;border-radius:8px;font:inherit;margin:5px 0 11px;background:white}.row{border-top:1px solid #e9ebee;padding:12px 0}.item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}dialog{border:1px solid #ccd2d9;border-radius:13px;padding:18px;width:min(640px,calc(100% - 20px));max-height:88vh}dialog::backdrop{background:#1018279c}.foot{font-size:12px;color:#667282;margin:28px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:12px}h1{font-size:19px}.cutrow{grid-template-columns:1fr 110px}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
+<header><div class="top"><div><h1>ZZIPING 2.0 • Controle da Produção</h1><small>Módulo 3 — Corte, envios parciais e devoluções</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
+<main class="shell"><p class="warn">Ambiente exclusivo da ZZIPING 2.0. <b>Liberar para produção</b> modifica o status deste pedido somente no banco de testes. Não gera pagamentos nem altera a ZZIPING 1.0.</p>
+<p id="notice" role="status" aria-live="polite"></p>
+<div class="card top"><a href="pedidos.html" class="button secondary">← Pedidos</a><div id="identity" class="muted">Verificando sessão...</div><button id="reload" type="button" class="secondary">Atualizar</button></div>
+<section id="blocked" class="card hidden"><h2>Sem acesso</h2><p id="blockedmsg">Faça login na ZZIPING 2.0 para acessar a produção.</p><a href="index.html" class="button">Entrar</a></section>
+<section id="work" class="hidden"><div class="card"><h2>Pedidos de produção</h2><label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div><div class="actions"><button id="release">Liberar pedido para corte</button></div></div>
+<div class="card"><h2>Produtos e andamento</h2><div id="products"></div></div>
+<div class="card"><h2>Histórico de movimentações</h2><div id="history"></div></div></section>
+<dialog id="cutdialog"><h2 id="cuttitle">Concluir corte</h2><p class="muted">Informe a quantidade efetivamente cortada por tamanho. O sistema registrará como reserva toda quantidade excedente à vendida. O corte completo não pode ser lançado duas vezes.</p>
+<form id="cutform"><div id="cutrows"></div><div class="actions"><button id="savecut" type="submit">Concluir corte</button><button type="button" class="secondary" id="cancelcut">Cancelar</button></div></form></dialog>
+<dialog id="senddialog"><h2 id="sendtitle">Enviar para processo</h2><p id="sendhint" class="muted"></p>
+<form id="sendform"><div class="grid"><label>Tamanho<select name="tamanho_id" id="send_size" required></select></label><label>Quantidade<input name="quantidade" type="number" min="1" step="1" required></label></div>
+<div class="grid"><label>Facção / Prestador<select name="faccao_id" id="send_faccao"><option value="">Sem facção (operação interna)</option></select></label><label>Data de envio<input name="enviado_em" type="date" required></label></div>
+<label>Prazo previsto da devolução (opcional)<input name="prazo_previsto" type="date"></label>
+<div class="actions"><button id="savesend" type="submit">Registrar envio</button><button class="secondary" id="cancelsend" type="button">Cancelar</button></div></form></dialog>
+<dialog id="returndialog"><h2>Registrar devolução</h2><p id="returnhint" class="muted"></p>
+<form id="returnform"><div class="grid"><label>Peças devolvidas<input name="quantidade_recebida" type="number" min="1" required></label><label>Peças aprovadas<input name="quantidade_aprovada" type="number" min="0" required></label></div>
+<div class="grid"><label>Data da devolução<input name="devolvido_em" type="date" required></label><label>Observações<input name="observacoes" placeholder="Ex.: peça danificada"></label></div>
+<p class="muted">Peças devolvidas que não forem aprovadas serão registradas como rejeitadas; ainda não podem avançar automaticamente.</p>
+<div class="actions"><button id="savereturn" type="submit">Registrar devolução</button><button class="secondary" id="cancelreturn" type="button">Cancelar</button></div></form></dialog>
+<p class="foot">ZZIPING 2.0 — Módulo 3 inicial. Conferência final, reprocessos, substituição de peças rejeitadas e financeiro ainda não habilitados.</p></main>
+<script>
+'use strict';
+const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null;
+let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[];
+const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const message=(m,error=false)=>{$('notice').textContent=m||'';$('notice').className=error?'error':'good'};
+function has(k){return !!profile?.ativo&&(profile.papel==='administrador'||!!rights?.[k])}
+function show(k,v){$(k).classList.toggle('hidden',!v)}
+const findProduct=id=>produtos.find(p=>p.id===id);
+const relatedSizes=id=>grades.filter(t=>t.produto_id===id);
+const relatedSteps=id=>etapas.filter(x=>x.produto_id===id).sort((a,b)=>a.ordem-b.ordem);
+const returning=id=>retornos.filter(r=>r.movimentacao_id===id);
+const received=id=>returning(id).reduce((n,r)=>n+r.quantidade_recebida,0);
+const approved=id=>returning(id).reduce((n,r)=>n+r.quantidade_aprovada,0);
+function processTotal(size,step){return movimentos.filter(m=>m.produto_tamanho_id===size&&m.processo_id===step).reduce((n,m)=>n+m.quantidade_enviada,0)}
+function approvedTotal(size,step){return movimentos.filter(m=>m.produto_tamanho_id===size&&m.processo_id===step).reduce((n,m)=>n+approved(m.id),0)}
+function available(size,proc){
+ const t=grades.find(x=>x.id===size),pr=etapas.find(x=>x.id===proc);
+ if(!t||!pr||pr.ordem<2)return 0;
+ const prev=etapas.find(x=>x.produto_id===t.produto_id&&x.ordem===pr.ordem-1);
+ const done=pr.ordem===2?(cortes.find(x=>x.produto_tamanho_id===size)?.quantidade_cortada||0):approvedTotal(size,prev?.id);
+ return Math.max(0,done-processTotal(size,proc));
+}
+async function fetchTable(table){const {data,error}=await db.from(table).select('*');if(error)throw error;return data||[]}
+async function init(){
+ try{
+  if(!window.supabase?.createClient)throw Error('Biblioteca Supabase não carregada.');
+  db=window.supabase.createClient(SBASE,PKEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+  const {data:{session},error}=await db.auth.getSession();if(error)throw error;
+  if(!session){show('blocked',true);return}auth=session;
+  const [u,p]=await Promise.all([db.from('usuarios').select('*').eq('id',session.user.id).maybeSingle(),db.from('permissoes_usuario').select('*').eq('usuario_id',session.user.id).maybeSingle()]);
+  if(u.error)throw u.error;if(p.error)throw p.error;profile=u.data;rights=p.data;
+  if(!has('producao_visualizar')){show('blocked',true);$('blockedmsg').textContent='Sua conta não tem permissão para consultar produção.';return}
+  canEdit=has('producao_operar');
+  $('identity').textContent=profile.nome+(canEdit?' · Operação autorizada':' · Consulta');
+  show('work',true);await load();
+ }catch(e){show('blocked',true);$('blockedmsg').textContent='Erro ao abrir produção: '+e.message;message(e.message,true)}
+}
+async function load(keep=true){
+ const selected=$('order').value;
+ try{
+  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes]=await Promise.all([
+   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes'
+  ].map(fetchTable));
+  pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
+  $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
+  $('order').value=pedidos.some(p=>p.id===selected)?selected:(pedidos[0]?.id||'');
+  render();
+  if(!keep)message('Produção atualizada.');
+ }catch(e){message('Não foi possível carregar: '+e.message,true)}
+}
+function render(){
+ const p=pedidos.find(x=>x.id===$('order').value);
+ $('ordermeta').innerHTML=p?'<div class="line"><b>Pedido:</b> '+esc(p.numero_externo)+' · '+esc(p.prioridade)+' · Entrega '+esc(p.prazo_entrega)+' · <b>'+esc(p.status)+'</b></div>':'<p class="muted">Nenhum pedido encontrado.</p>';
+ $('release').disabled=!canEdit||!p||p.status!=='rascunho';
+ $('release').classList.toggle('hidden',!p||p.status!=='rascunho');
+ const ps=produtos.filter(x=>x.pedido_id===p?.id);
+ $('products').innerHTML=ps.map(prod=>{
+  const sz=relatedSizes(prod.id),steps=relatedSteps(prod.id);
+  const complete=sz.length>0&&sz.every(t=>cortes.some(c=>c.produto_tamanho_id===t.id));
+  const extra=sz.reduce((n,t)=>n+(cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_reserva||0),0);
+  const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
+  const cutBtn=canEdit&&p.status==='em_producao'&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
+  const stagesHtml=steps.filter(s=>s.ordem>1).map(s=>{
+   const availability=sz.reduce((n,t)=>n+available(t.id,s.id),0);
+   const sent=sz.reduce((n,t)=>n+processTotal(t.id,s.id),0);
+   const returned=movimentos.filter(m=>m.processo_id===s.id).reduce((n,m)=>n+received(m.id),0);
+   return '<div class="row"><div class="top"><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+(canEdit&&p.status==='em_producao'?'<button class="secondary" data-send="'+esc(s.id)+'">Enviar peças</button>':'')+'</div><div class="muted">Disponíveis: '+availability+' · Enviadas: '+sent+' · Devolvidas: '+returned+' · '+esc(s.origem)+'</div></div>';
+  }).join('');
+  return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+'</div><div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
+ }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
+ const movementList=movimentos.filter(m=>ps.some(prod=>relatedSizes(prod.id).some(t=>t.id===m.produto_tamanho_id)))
+ .sort((a,b)=>b.registrado_em.localeCompare(a.registrado_em));
+ $('history').innerHTML=movementList.map(m=>{
+  const t=grades.find(x=>x.id===m.produto_tamanho_id),prod=findProduct(t?.produto_id),step=etapas.find(x=>x.id===m.processo_id),f=faccoes.find(x=>x.id===m.faccao_id);
+  const remain=m.quantidade_enviada-received(m.id);
+  return '<div class="mov"><div class="top"><b>'+esc(prod?.descricao)+' · '+esc(t?.tamanho)+' · '+esc(step?.nome)+'</b><span class="pill">'+m.quantidade_enviada+' enviadas</span></div><div class="line">'+esc(f?.nome||'Operação interna')+' · Envio: '+esc(m.enviado_em)+' · Recebidas: '+received(m.id)+' · Aprovadas: '+approved(m.id)+'</div><small>Saldo aguardando retorno: '+remain+(m.prazo_previsto?' · Prazo: '+esc(m.prazo_previsto):'')+'</small>'+(remain>0&&canEdit?'<button class="secondary" data-return="'+esc(m.id)+'">Registrar devolução</button>':'')+'</div>';
+ }).join('')||'<p class="muted">Ainda não existem envios para este pedido.</p>';
+}
+function busy(el,v,text){el.disabled=v;el.textContent=v?'Salvando...':text}
+$('order').onchange=render;$('reload').onclick=()=>load(false);
+$('release').onclick=async()=>{
+ const id=$('order').value,p=pedidos.find(x=>x.id===id);
+ if(!p||!confirm('Liberar o pedido '+p.numero_externo+' para produção? Esta mudança é permanente nesta fase.'))return;
+ const btn=$('release');busy(btn,true,'Liberar pedido para corte');
+ try{const {error}=await db.rpc('zz2_liberar_pedido',{p_pedido_id:id});if(error)throw error;await load();message('Pedido liberado para produção. O cortador pode concluir o corte.')}catch(e){message(e.message,true)}finally{busy(btn,false,'Liberar pedido para corte')}
+};
+$('products').onclick=e=>{
+ const b=e.target.closest('[data-cut],[data-send]');
+ if(b?.dataset.cut)openCut(b.dataset.cut);
+ if(b?.dataset.send)openSend(b.dataset.send);
+};
+$('history').onclick=e=>{const b=e.target.closest('[data-return]');if(b)openReturn(b.dataset.return)};
+function openCut(id){
+ const p=findProduct(id);if(!p)return;selectedProduct=id;$('cuttitle').textContent='Concluir corte · '+p.descricao;
+ $('cutrows').innerHTML=relatedSizes(id).map(t=>'<label class="cutrow"><span>'+esc(t.tamanho)+' · Vendidas: '+t.quantidade_vendida+'</span><input type="number" class="cutqty" data-size="'+esc(t.id)+'" min="'+t.quantidade_vendida+'" max="9999999" step="1" required value="'+t.quantidade_vendida+'"></label>').join('');
+ $('cutdialog').showModal();
+}
+$('cancelcut').onclick=()=>$('cutdialog').close();
+$('cutform').onsubmit=async e=>{
+ e.preventDefault();const btn=$('savecut');busy(btn,true,'Concluir corte');
+ try{
+  const grade=[...$('cutrows').querySelectorAll('.cutqty')].map(x=>({tamanho_id:x.dataset.size,quantidade_cortada:Number(x.value)}));
+  if(grade.some(x=>!Number.isInteger(x.quantidade_cortada)))throw Error('Informe quantidades inteiras');
+  const {error}=await db.rpc('zz2_concluir_corte',{p_produto_id:selectedProduct,p_grade:grade});if(error)throw error;
+  $('cutdialog').close();await load();message('Corte concluído. As peças extras foram registradas como reserva.');
+ }catch(e){message(e.message,true)}finally{busy(btn,false,'Concluir corte')}
+};
+function openSend(id){
+ const s=etapas.find(x=>x.id===id),pr=findProduct(s?.produto_id);
+ if(!s||!pr)return;selectedProcess=id;
+ $('sendtitle').textContent='Enviar · '+s.nome;
+ $('sendhint').textContent='Produto: '+pr.descricao+' · Etapa '+s.ordem+'. Quantidades disponíveis calculadas considerando cortes e retornos aprovados.';
+ const opts=relatedSizes(pr.id).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.tamanho)+' · '+available(t.id,id)+' disponíveis</option>');
+ $('send_size').innerHTML=opts.join('');
+ $('send_faccao').innerHTML='<option value="">Sem facção / Interno</option>'+faccoes.filter(f=>f.ativo).map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
+ $('sendform').reset();$('send_size').innerHTML=opts.join('');
+ $('sendform').elements.enviado_em.value=today();
+ $('send_faccao').required=s.origem==='facção';
+ $('send_faccao').disabled=s.origem==='interno';
+ $('senddialog').showModal();
+}
+$('cancelsend').onclick=()=>$('senddialog').close();
+$('sendform').onsubmit=async e=>{
+ e.preventDefault();const f=e.target,btn=$('savesend');busy(btn,true,'Registrar envio');
+ try{
+  const {error}=await db.rpc('zz2_enviar_processo',{
+   p_tamanho_id:f.elements.tamanho_id.value,p_processo_id:selectedProcess,
+   p_quantidade:Number(f.elements.quantidade.value),p_faccao_id:f.elements.faccao_id.value||null,
+   p_enviado_em:f.elements.enviado_em.value,p_prazo_previsto:f.elements.prazo_previsto.value||null
+  });if(error)throw error;
+  $('senddialog').close();await load();message('Envio registrado. Aguarde o retorno ou registre devolução parcial.');
+ }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar envio')}
+};
+function openReturn(id){
+ const m=movimentos.find(x=>x.id===id);if(!m)return;selectedMovement=id;
+ const saldo=m.quantidade_enviada-received(id);
+ $('returnhint').textContent='Saldo máximo disponível para devolução: '+saldo+' peça(s).';
+ $('returnform').reset();
+ $('returnform').elements.quantidade_recebida.max=String(saldo);
+ $('returnform').elements.quantidade_recebida.value=String(saldo);
+ $('returnform').elements.quantidade_aprovada.value=String(saldo);
+ $('returnform').elements.devolvido_em.value=today();
+ $('returndialog').showModal();
+}
+$('returnform').elements.quantidade_recebida.oninput=e=>{
+ const x=$('returnform').elements.quantidade_aprovada;x.max=e.target.value;if(Number(x.value)>Number(e.target.value))x.value=e.target.value;
+};
+$('cancelreturn').onclick=()=>$('returndialog').close();
+$('returnform').onsubmit=async e=>{
+ e.preventDefault();const f=e.target,btn=$('savereturn');busy(btn,true,'Registrar devolução');
+ try{
+  const {error}=await db.rpc('zz2_registrar_retorno',{
+   p_movimentacao_id:selectedMovement,p_quantidade_recebida:Number(f.elements.quantidade_recebida.value),
+   p_quantidade_aprovada:Number(f.elements.quantidade_aprovada.value),
+   p_devolvido_em:f.elements.devolvido_em.value,p_observacoes:f.elements.observacoes.value.trim()||null
+  });if(error)throw error;
+  $('returndialog').close();await load();message('Devolução registrada com quantidades aprovadas/rejeitadas.');
+ }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar devolução')}
+};
+init();
+</script></body></html>
