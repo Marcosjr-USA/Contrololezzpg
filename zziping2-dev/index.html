@@ -75,9 +75,9 @@ async function zz2CriarConta(){
 </script>
 <script>
 'use strict';
-const URL='https://clgsozqaahxiwunvrkra.supabase.co';const KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const SUPABASE_URL='https://clgsozqaahxiwunvrkra.supabase.co';const SUPABASE_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 if(!window.supabase?.createClient){document.getElementById('notice').textContent='Erro ao carregar a biblioteca Supabase. Recarregue a página (Ctrl + F5).';document.getElementById('notice').className='err';throw new Error('Supabase JS indisponível');}
-const db=window.supabase.createClient(URL,KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let session=null,profile=null,perms=null,cache={clientes:[],faccoes:[],tipos_servico:[],usuarios:[],permissoes_usuario:[],auditoria_cadastros:[]};let editing={kind:null,id:null};
 function inform(msg,error=false){$('notice').className=error?'err':'ok';$('notice').textContent=msg||''}function fail(e){inform(e?.message||String(e),true)}function permitted(k){return profile?.papel==='administrador'||!!perms?.[k]}function setVisible(id,yes){$(id).classList.toggle('hidden',!yes)}
 async function fetchTable(name,order='nome'){const q=db.from(name).select('*').order(order,{ascending:name==='auditoria_cadastros'?false:true});const {data,error}=await q;if(error)throw error;cache[name]=data||[];return cache[name]}
