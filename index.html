@@ -157,8 +157,8 @@ body.admin-layout header{padding-left:270px}
 .pesquisa-controles{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;align-items:end;margin:14px 0}.pesquisa-controles label{min-width:0}.pesquisa-controles input,.pesquisa-controles select{width:100%;box-sizing:border-box}.pesquisa-item{padding:14px 0;border-bottom:1px solid #e6e8ed;overflow-wrap:anywhere}.pesquisa-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pesquisa-situacao{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700}.pesquisa-situacao.finalizado{background:#dff5e6;color:#167538}.pesquisa-situacao.producao{background:#e3edff;color:#2056b3}.pesquisa-situacao.atrasado{background:#ffe1e4;color:#b92130}#pesquisaResumo{margin:10px 0}@media(max-width:600px){.pesquisa-controles{grid-template-columns:1fr}}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><div class="marca-topo"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes" class="logo-header"><div><h1>Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></div></div></header><main>
 <div id="login" class="card"><div class="login-marca"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="Logomarca ZZIPING Uniformes" class="logo-login"></div><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
-<div id="app" class="hidden"><button id="abrirMenuAdmin" class="secondary hidden no-print" onclick="alternarMenuAdmin()" aria-label="Abrir menu administrativo" aria-expanded="false">☰ Menu</button><aside id="menuAdmin" class="hidden no-print" aria-label="Menu administrativo"><button id="fecharMenuAdmin" type="button" onclick="alternarMenuAdmin()" aria-label="Fechar menu">✕ &nbsp; Fechar menu</button><div class="admin-side-brand"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes"></div><div class="admin-side-label">NAVEGAÇÃO</div><button data-tab="painel" onclick="tab('painel')">▦ &nbsp; Dashboard</button><button data-tab="pesquisa" onclick="tab('pesquisa')">⌕ &nbsp; Pesquisar</button><button data-tab="servicos" onclick="tab('servicos')">▤ &nbsp; Serviços</button><button data-tab="prestadores" onclick="tab('prestadores')">♟ &nbsp; Prestadores</button><button data-tab="relatorios" onclick="tab('relatorios')">▥ &nbsp; Relatórios</button><button data-tab="auditoria" onclick="tab('auditoria')">◴ &nbsp; Histórico</button><button data-tab="usuarios" onclick="tab('usuarios')">♙ &nbsp; Usuários</button><div class="admin-side-label admin-side-divider">AÇÕES RÁPIDAS</div><button class="admin-side-action" onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ &nbsp; Novo serviço</button><button class="admin-side-action" onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">＋ &nbsp; Novo prestador</button><button class="admin-side-action" onclick="tab('relatorios')">▤ &nbsp; Relatório do período</button><div class="admin-side-bottom"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING"></div></aside><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav id="navPadrao"><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button><button id="navUsuarios" class="hidden" onclick="tab('usuarios')">Usuários</button></nav><p id="status" class="muted"></p>
-<section id="painel"><div id="dashSeletor" class="card hidden no-print"><label for="dashModo">Modelo do painel</label><select id="dashModo" onchange="trocarDashboard(this.value)"><option value="1">Dashboard Mod 1 — Clássico</option><option value="2">Dashboard Mod 2 — Gerencial</option></select></div><div id="dashboardAdmin" class="hidden"><div class="card"><div class="dash-titulo"><h2>Dashboard administrativo · Visão geral</h2><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="ZZIPING Uniformes" class="logo-dash"></div><div class="buttons"><label>Período <select id="dashPeriodo" onchange="renderDashboard()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="year">Este ano</option><option value="all">Todo o período</option></select></label><button class="secondary" onclick="carregar()">Atualizar dados</button></div><div id="dashMetricas" class="grid"></div></div><div class="dash-cols"><div class="card"><h2>Produção por prestador</h2><div id="dashPrestadores"></div></div><div class="card"><h2>Alertas e prioridades</h2><div id="dashAlertas"></div></div></div><div class="card"><h2>Últimos serviços</h2><div id="dashRecentes"></div></div><div class="card"><h2>Ações rápidas</h2><div class="buttons"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">+ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">+ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">Relatórios</button><button class="secondary" onclick="tab('usuarios')">Usuários</button></div></div></div><div id="dashboardMod2" class="hidden">
+<div id="app" class="hidden"><button id="abrirMenuAdmin" class="secondary hidden no-print" onclick="alternarMenuAdmin()" aria-label="Abrir menu administrativo" aria-expanded="false">☰ Menu</button><aside id="menuAdmin" class="hidden no-print" aria-label="Menu administrativo"><button id="fecharMenuAdmin" type="button" onclick="alternarMenuAdmin()" aria-label="Fechar menu">✕ &nbsp; Fechar menu</button><div class="admin-side-brand"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes"></div><div class="admin-side-label">NAVEGAÇÃO</div><button data-tab="painel" onclick="tab('painel')">▦ &nbsp; Dashboard</button><button data-tab="pesquisa" onclick="tab('pesquisa')">⌕ &nbsp; Pesquisar</button><button data-tab="servicos" onclick="tab('servicos')">▤ &nbsp; Serviços</button><button data-tab="prestadores" onclick="tab('prestadores')">♟ &nbsp; Prestadores</button><button data-tab="relatorios" onclick="tab('relatorios')">▥ &nbsp; Relatórios</button><button id="menuAuditoria" data-tab="auditoria" onclick="tab('auditoria')">◴ &nbsp; Histórico</button><button id="menuUsuarios" data-tab="usuarios" onclick="tab('usuarios')">♙ &nbsp; Usuários</button><div class="admin-side-label admin-side-divider">AÇÕES RÁPIDAS</div><button class="admin-side-action" onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ &nbsp; Novo serviço</button><button class="admin-side-action" onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">＋ &nbsp; Novo prestador</button><button class="admin-side-action" onclick="tab('relatorios')">▤ &nbsp; Relatório do período</button><div class="admin-side-bottom"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING"></div></aside><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav id="navPadrao"><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button><button id="navUsuarios" class="hidden" onclick="tab('usuarios')">Usuários</button></nav><p id="status" class="muted"></p>
+<section id="painel"><div id="dashSeletor" class="card hidden no-print"><label for="dashModo">Modelo do painel</label><select id="dashModo" onchange="trocarDashboard(this.value)"><option value="1">Dashboard Mod 1 — Clássico</option><option value="2">Dashboard Mod 2 — Gerencial</option></select></div><div id="dashboardAdmin" class="hidden"><div class="card"><div class="dash-titulo"><h2>Dashboard administrativo · Visão geral</h2><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="ZZIPING Uniformes" class="logo-dash"></div><div class="buttons"><label>Período <select id="dashPeriodo" onchange="renderDashboard()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="year">Este ano</option><option value="all">Todo o período</option></select></label><button class="secondary" onclick="carregar()">Atualizar dados</button></div><div id="dashMetricas" class="grid"></div></div><div class="dash-cols"><div class="card"><h2>Produção por prestador</h2><div id="dashPrestadores"></div></div><div class="card"><h2>Alertas e prioridades</h2><div id="dashAlertas"></div></div></div><div class="card"><h2>Últimos serviços</h2><div id="dashRecentes"></div></div><div class="card"><h2>Ações rápidas</h2><div class="buttons"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">+ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">+ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">Relatórios</button><button id="dashAcaoUsuarios" class="secondary" onclick="tab('usuarios')">Usuários</button></div></div></div><div id="dashboardMod2" class="hidden">
 <div class="card mod2-head"><div><h2>▥ Dashboard — Visão Geral</h2><p class="muted">Produção, entregas e pendências em um só lugar.</p></div><label>Período<select id="mod2Periodo" onchange="renderDashboardMod2()"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="year">Este ano</option><option value="all">Todo o período</option></select></label></div>
 <div id="mod2Indicadores" class="mod2-kpis"></div>
 <div class="mod2-duas"><div class="card"><h2>◉ Serviços por status</h2><div id="mod2Status" class="mod2-status"></div></div><div class="card"><h2>↗ Evolução da produção</h2><p class="muted">Quantidade de serviços enviados por dia no período selecionado</p><div id="mod2Evolucao" class="mod2-evolucao"></div></div></div>
@@ -197,18 +197,18 @@ async function excluirRegistro(t,id){
 }
 
 function trocarDashboard(modo){
- if(!adminPrincipal)return;
  dashboardModo=modo==='2'?'2':'1';
  try{localStorage.setItem('zziping_dashboard_modo',dashboardModo)}catch(e){}
  atualizarDashboards();
 }
 function atualizarDashboards(){
- $('dashSeletor').classList.toggle('hidden',!adminPrincipal);
- $('dashboardAdmin').classList.toggle('hidden',!adminPrincipal||dashboardModo!=='1');
- $('dashboardMod2').classList.toggle('hidden',!adminPrincipal||dashboardModo!=='2');
- $('painelBasico').classList.toggle('hidden',adminPrincipal);
+ $('dashSeletor').classList.remove('hidden');
+ $('dashboardAdmin').classList.toggle('hidden',dashboardModo!=='1');
+ $('dashboardMod2').classList.toggle('hidden',dashboardModo!=='2');
+ $('painelBasico').classList.add('hidden');
  $('dashModo').value=dashboardModo;
- if(adminPrincipal&&dashboardModo==='2')renderDashboardMod2();
+ $('dashAcaoUsuarios').classList.toggle('hidden',!adminPrincipal);
+ if(dashboardModo==='2')renderDashboardMod2();
 }
 function mod2Categoria(v){
  const q=pendente(v);
@@ -218,7 +218,6 @@ function mod2Categoria(v){
  return 'andamento';
 }
 function renderDashboardMod2(){
- if(!adminPrincipal)return;
  const periodo=$('mod2Periodo').value;
  const limite=periodo==='all'?'0000-01-01':periodo==='year'?today().slice(0,4)+'-01-01':new Date(Date.now()-Number(periodo)*86400000).toISOString().slice(0,10);
  const recorte=s.filter(v=>v.data_saida>=limite);
@@ -261,7 +260,6 @@ function renderDashboardMod2(){
 }
 
 function renderDashboard(){
- if(!adminPrincipal)return;
  const periodo=$('dashPeriodo').value,limite=periodo==='all'?'0000-01-01':new Date(Date.now()-Number(periodo)*86400000).toISOString().slice(0,10);
  const recentes=s.filter(v=>v.data_saida>=limite),abertos=s.filter(v=>pendente(v)>0),atrasados=abertos.filter(v=>v.data_prevista<today());
  const devolvidas=b.filter(v=>v.data_retorno>=limite).reduce((n,v)=>n+Number(v.quantidade),0);
@@ -277,7 +275,7 @@ function normalizarPesquisa(texto){
  return String(texto??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 function renderPesquisa(){
- if(!adminPrincipal||!$('pesquisaResultados'))return;
+ if(!$('pesquisaResultados'))return;
  const termo=normalizarPesquisa($('pesquisaTermo').value),filtro=$('pesquisaStatus').value;
  const palavras=termo.split(/\s+/).filter(Boolean);
  const encontrados=s.filter(v=>{
@@ -295,9 +293,9 @@ function renderPesquisa(){
  }).join(''):'<p class="muted">Nenhum pedido encontrado. Experimente outro nome ou selecione “Todos os pedidos”.</p>';
 }
 function descricao(v){let pr=p.find(x=>x.id===v.prestador_id),q=pendente(v),atrasado=q>0&&v.data_prevista<today();return '<div class="line"><b>'+esc(pr?.nome||'Prestador')+'</b> '+(atrasado?'<span class="badge danger">Atrasado</span>':q===0?'<span class="badge">Finalizado</span>':'')+'<div>'+esc(v.descricao)+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Prazo: '+fmt(v.data_prevista)+' · '+q+' de '+v.quantidade+' peças pendentes</div>'+'<p class="buttons">'+(q?'<button class="secondary" onclick="darBaixa(\''+v.id+'\')">Dar baixa</button>':'')+'<button class="secondary" onclick="editarServico(\''+v.id+'\')">Editar serviço</button>'+botaoExcluir('servicos',v.id)+'</p></div>'}
-function render(){options();if(adminPrincipal)renderPesquisa();atualizarDashboards();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button>'+botaoExcluir('prestadores',v.id)+'</p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>';renderDashboard()}
+function render(){options();renderPesquisa();atualizarDashboards();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button>'+botaoExcluir('prestadores',v.id)+'</p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>';renderDashboard()}
 async function carregar(){status('Sincronizando dados...');try{const [a,c,d]=await Promise.all([client.from('prestadores').select('*').order('nome'),client.from('servicos').select('*').order('criado_em',{ascending:false}),client.from('baixas').select('*').order('registrado_em',{ascending:false})]);for(const r of [a,c,d])if(r.error)throw r.error;p=a.data||[];s=c.data||[];b=d.data||[];render();status('Dados sincronizados com Supabase.')}catch(e){status('Falha ao carregar: '+e.message,true)}}
-function tab(id){if((id==='usuarios'||id==='pesquisa')&&!adminPrincipal)return;tabAtual=id;atualizarMenuAdmin();for(const a of ['painel','pesquisa','servicos','prestadores','relatorios','auditoria','usuarios'])$(a).classList.toggle('hidden',a!==id);carregar();if(id==='auditoria')carregarAuditoria();if(id==='usuarios'&&adminPrincipal)carregarUsuarios();if(id==='pesquisa'&&adminPrincipal)renderPesquisa()}
+function tab(id){if((id==='usuarios'||id==='auditoria')&&!adminPrincipal)return;tabAtual=id;atualizarMenuAdmin();for(const a of ['painel','pesquisa','servicos','prestadores','relatorios','auditoria','usuarios'])$(a).classList.toggle('hidden',a!==id);carregar();if(id==='auditoria')carregarAuditoria();if(id==='usuarios'&&adminPrincipal)carregarUsuarios();if(id==='pesquisa')renderPesquisa()}
 function alternarMenuAdmin(){
  const aberto=$('menuAdmin').classList.toggle('menu-aberto');
  $('abrirMenuAdmin').setAttribute('aria-expanded',String(aberto));
@@ -308,12 +306,12 @@ function atualizarMenuAdmin(){
  if(window.innerWidth<=800){$('menuAdmin').classList.remove('menu-aberto');$('abrirMenuAdmin').setAttribute('aria-expanded','false')}
 }
 function aplicarLayoutAdmin(){
- $('app').classList.toggle('layout-admin',adminPrincipal);
- document.body.classList.toggle('admin-layout',adminPrincipal);
- $('menuAdmin').classList.toggle('hidden',!adminPrincipal);
- $('navPadrao').classList.toggle('hidden',adminPrincipal);
- $('abrirMenuAdmin').classList.toggle('hidden',!adminPrincipal);
- if(!adminPrincipal)$('menuAdmin').classList.remove('menu-aberto');
+ $('app').classList.add('layout-admin');
+ document.body.classList.add('admin-layout');
+ $('menuAdmin').classList.remove('hidden');
+ $('navPadrao').classList.add('hidden');
+ $('abrirMenuAdmin').classList.remove('hidden');
+ if(!session)$('menuAdmin').classList.remove('menu-aberto');
  atualizarMenuAdmin();
 }
 async function entrar(ev){ev.preventDefault();$('loginmsg').textContent='Entrando...';const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('senha').value});if(error){$('loginmsg').textContent=error.message;return}mostrar(data.session)}
@@ -323,11 +321,13 @@ async function mostrar(sess){
  $('login').classList.toggle('hidden',!!sess);
  $('app').classList.toggle('hidden',!sess);
  $('navUsuarios').classList.add('hidden');
+ $('menuUsuarios').classList.add('hidden');
+ $('menuAuditoria').classList.add('hidden');
  if(!sess)return;
  $('usuario').textContent=sess.user.email;$('senha').value='';
  const {data:admin,error}=await client.rpc('zziping_admin_principal');
- dashboardModo='1';
- if(!error&&admin===true){adminPrincipal=true;dashboardModo='2';$('navUsuarios').classList.remove('hidden');}
+ dashboardModo='2';
+ if(!error&&admin===true){adminPrincipal=true;$('navUsuarios').classList.remove('hidden');}
  tabAtual='painel';
  for(const sec of ['painel','pesquisa','servicos','prestadores','relatorios','auditoria','usuarios'])$(sec).classList.toggle('hidden',sec!=='painel');
  aplicarLayoutAdmin();
