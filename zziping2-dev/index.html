@@ -37,7 +37,8 @@ async function zz2Entrar(){
    const resultado=await app.auth.setSession({access_token:dados.access_token,refresh_token:dados.refresh_token});
    if(resultado.error)throw resultado.error;
   }else{
-   localStorage.setItem('sb-clgsozqaahxiwunvrkra-auth-token',JSON.stringify(dados));
+   mostrar('Login aceito pelo Supabase, mas o painel não carregou sua biblioteca JavaScript. Tente abrir em janela privativa ou verificar bloqueadores de scripts.',true);
+   return;
   }
   window.location.reload();
  }catch(e){
