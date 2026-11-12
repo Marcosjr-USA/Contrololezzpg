@@ -10,7 +10,8 @@ button.secondary.stage-action.status-done{background:#228448;color:white}
 button.secondary.stage-action.status-late{background:#bf2934;color:white}
 button.secondary.stage-action:disabled{opacity:1;cursor:default}
 button.secondary.stage-action.status-progress:disabled,button.secondary.stage-action.status-late:disabled{opacity:.8}
-.item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}dialog{border:1px solid #ccd2d9;border-radius:13px;padding:18px;width:min(640px,calc(100% - 20px));max-height:88vh}dialog::backdrop{background:#1018279c}.foot{font-size:12px;color:#667282;margin:28px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:12px}h1{font-size:19px}.cutrow{grid-template-columns:1fr 110px}}
+.item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}.return-partial-row{border:1px solid #e3e6eb;border-radius:9px;margin:8px 0;padding:10px}.return-partial-row .grid{grid-template-columns:1fr 1fr}.return-action{background:#255f99;color:white}.return-action:hover{background:#204f80}
+@media(max-width:650px){.return-partial-row .grid{grid-template-columns:1fr}}dialog{border:1px solid #ccd2d9;border-radius:13px;padding:18px;width:min(640px,calc(100% - 20px));max-height:88vh}dialog::backdrop{background:#1018279c}.foot{font-size:12px;color:#667282;margin:28px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:12px}h1{font-size:19px}.cutrow{grid-template-columns:1fr 110px}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
 <header><div class="top"><div><h1>ZZIPING 2.0 • Controle da Produção</h1><small>Módulo 3 — Corte, envios parciais e devoluções</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
 <main class="shell"><p class="warn">Ambiente exclusivo da ZZIPING 2.0. <b>Liberar para produção</b> modifica o status deste pedido somente no banco de testes. Não gera pagamentos nem altera a ZZIPING 1.0.</p>
@@ -28,17 +29,20 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <div class="grid"><label>Facção / Prestador<select name="faccao_id" id="send_faccao"><option value="">Sem facção (operação interna)</option></select></label><label>Data de envio<input name="enviado_em" type="date" required></label></div>
 <label>Prazo previsto da devolução (preenchido automaticamente; pode ajustar)<input name="prazo_previsto" type="date"></label><p id="send_deadline_info" class="muted"></p>
 <div class="actions"><button id="savesend" type="submit">Registrar envio</button><button class="secondary" id="cancelsend" type="button">Cancelar</button></div></form></dialog>
-<dialog id="returndialog"><h2>Registrar devolução</h2><p id="returnhint" class="muted"></p>
-<form id="returnform"><div class="grid"><label>Peças devolvidas<input name="quantidade_recebida" type="number" min="1" required></label><label>Peças aprovadas<input name="quantidade_aprovada" type="number" min="0" required></label></div>
-<div class="grid"><label>Data da devolução<input name="devolvido_em" type="date" required></label><label>Observações<input name="observacoes" placeholder="Ex.: peça danificada"></label></div>
-<p class="muted">Peças devolvidas que não forem aprovadas serão registradas como rejeitadas; ainda não podem avançar automaticamente.</p>
-<div class="actions"><button id="savereturn" type="submit">Registrar devolução</button><button class="secondary" id="cancelreturn" type="button">Cancelar</button></div></form></dialog>
+<dialog id="returndialog"><h2 id="returntitle">Devolução do processo</h2><p id="returnhint" class="muted"></p>
+<form id="returnform">
+<label>Tipo de devolução<select id="return_mode"><option value="total">Devolução total — baixar todas as peças pendentes</option><option value="parcial">Devolução parcial — informar quantidades</option></select></label>
+<p id="returnsummary" class="muted"></p>
+<div id="returnpartial" class="hidden"><p class="muted">Informe quantas peças retornaram em cada envio/tamanho. O padrão é aprovar todas as peças retornadas. Ajuste a quantidade aprovada se houver rejeições. Use zero para deixar peças pendentes.</p><div id="returnrows"></div></div>
+<div class="grid"><label>Data da devolução<input name="devolvido_em" type="date" required></label><label>Observações<input name="observacoes" placeholder="Ex.: peças danificadas"></label></div>
+<p class="muted">Na devolução total, todas as peças pendentes serão registradas como aprovadas. Para rejeitar peças, escolha devolução parcial. Movimentações anteriores permanecem no histórico.</p>
+<div class="actions"><button id="savereturn" type="submit">Registrar devolução total</button><button class="secondary" id="cancelreturn" type="button">Cancelar</button></div></form></dialog>
 <p class="foot">ZZIPING 2.0 — Módulo 3 inicial. Conferência final, reprocessos, substituição de peças rejeitadas e financeiro ainda não habilitados.</p></main>
 <script>
 'use strict';
 const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null;
+let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null,selectedReturnProcess=null;
 let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 function addBusinessDays(iso,days){
@@ -168,10 +172,12 @@ function render(){
     '<button type="button" class="secondary stage-action status-'+state.id+'"'+
       (canSend?' data-send="'+esc(s.id)+'"':' data-blocked="'+esc(s.id)+'"')+
       ' title="'+esc(canSend?'Clique para enviar peças disponíveis':reason)+'">'+action+'</button>':'';
+   const returnButton=canEdit&&p.status==='em_producao'&&state.pending>0?
+     '<button type="button" class="return-action" data-returnprocess="'+esc(s.id)+'">Registrar devolução ('+state.pending+')</button>':'';
    const chip='<span class="status-chip status-'+state.id+'">'+state.name+'</span>';
    const note=!canSend&&p.status==='em_producao'&&state.id!=='done'?
      '<div class="muted" style="margin-top:5px">ℹ '+esc(reason)+'</div>':'';
-   return '<div class="row stage-row status-'+state.id+'"><div class="top"><div><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+chip+'</div>'+button+'</div>'+
+   return '<div class="row stage-row status-'+state.id+'"><div class="top"><div><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+chip+'</div><div class="actions">'+returnButton+button+'</div></div>'+
      '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
      ' · Devolvidas: '+state.receivedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div>'+note+'</div>';
   }).join('');
@@ -182,7 +188,7 @@ function render(){
  $('history').innerHTML=movementList.map(m=>{
   const t=grades.find(x=>x.id===m.produto_tamanho_id),prod=findProduct(t?.produto_id),step=etapas.find(x=>x.id===m.processo_id),f=faccoes.find(x=>x.id===m.faccao_id);
   const remain=m.quantidade_enviada-received(m.id);
-  return '<div class="mov"><div class="top"><b>'+esc(prod?.descricao)+' · '+esc(t?.tamanho)+' · '+esc(step?.nome)+'</b><span class="pill">'+m.quantidade_enviada+' enviadas</span></div><div class="line">'+esc(f?.nome||'Operação interna')+' · Envio: '+esc(m.enviado_em)+' · Recebidas: '+received(m.id)+' · Aprovadas: '+approved(m.id)+'</div><small>Saldo aguardando retorno: '+remain+(m.prazo_previsto?' · Prazo: '+esc(m.prazo_previsto):'')+'</small>'+(remain>0&&canEdit?'<button class="secondary" data-return="'+esc(m.id)+'">Registrar devolução</button>':'')+'</div>';
+  return '<div class="mov"><div class="top"><b>'+esc(prod?.descricao)+' · '+esc(t?.tamanho)+' · '+esc(step?.nome)+'</b><span class="pill">'+m.quantidade_enviada+' enviadas</span></div><div class="line">'+esc(f?.nome||'Operação interna')+' · Envio: '+esc(m.enviado_em)+' · Recebidas: '+received(m.id)+' · Aprovadas: '+approved(m.id)+'</div><small>Saldo aguardando retorno: '+remain+(m.prazo_previsto?' · Prazo: '+esc(m.prazo_previsto):'')+'</small>'+(remain>0&&canEdit?'<button class="secondary" data-returnprocess="'+esc(m.processo_id)+'">Devolver esta etapa</button>':'')+'</div>';
  }).join('')||'<p class="muted">Ainda não existem envios para este pedido.</p>';
 }
 function busy(el,v,text){el.disabled=v;el.textContent=v?'Salvando...':text}
@@ -194,9 +200,10 @@ $('release').onclick=async()=>{
  try{const {error}=await db.rpc('zz2_liberar_pedido',{p_pedido_id:id});if(error)throw error;await load();message('Pedido liberado para produção. O cortador pode concluir o corte.')}catch(e){message(e.message,true)}finally{busy(btn,false,'Liberar pedido para corte')}
 };
 $('products').onclick=e=>{
- const b=e.target.closest('[data-cut],[data-send],[data-blocked]');
+ const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess]');
  if(b?.dataset.cut)openCut(b.dataset.cut);
  if(b?.dataset.send)openSend(b.dataset.send);
+ if(b?.dataset.returnprocess)openReturnProcess(b.dataset.returnprocess);
  if(b?.dataset.blocked){
   const stage=etapas.find(x=>x.id===b.dataset.blocked);
   const previous=etapas.find(x=>x.produto_id===stage?.produto_id&&x.ordem===stage.ordem-1);
@@ -206,7 +213,7 @@ $('products').onclick=e=>{
   $('notice').scrollIntoView({behavior:'smooth',block:'nearest'});
  }
 };
-$('history').onclick=e=>{const b=e.target.closest('[data-return]');if(b)openReturn(b.dataset.return)};
+$('history').onclick=e=>{const b=e.target.closest('[data-returnprocess]');if(b)openReturnProcess(b.dataset.returnprocess)};
 function openCut(id){
  const p=findProduct(id);if(!p)return;selectedProduct=id;$('cuttitle').textContent='Concluir corte · '+p.descricao;
  $('cutrows').innerHTML=relatedSizes(id).map(t=>'<label class="cutrow"><span>'+esc(t.tamanho)+' · Vendidas: '+t.quantidade_vendida+'</span><input type="number" class="cutqty" data-size="'+esc(t.id)+'" min="'+t.quantidade_vendida+'" max="9999999" step="1" required value="'+t.quantidade_vendida+'"></label>').join('');
@@ -263,31 +270,71 @@ $('sendform').onsubmit=async e=>{
   message(count+' peça(s) enviadas para '+etapas.find(x=>x.id===selectedProcess)?.nome+'. Os tamanhos ficam registrados separadamente.');
  }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar envio')}
 };
-function openReturn(id){
- const m=movimentos.find(x=>x.id===id);if(!m)return;selectedMovement=id;
- const saldo=m.quantidade_enviada-received(id);
- $('returnhint').textContent='Saldo máximo disponível para devolução: '+saldo+' peça(s).';
+function pendingMovements(processId){
+ return movimentos.filter(m=>m.processo_id===processId&&m.quantidade_enviada>received(m.id))
+   .sort((a,b)=>a.enviado_em.localeCompare(b.enviado_em)||a.id.localeCompare(b.id));
+}
+function setReturnMode(){
+ const partial=$('return_mode').value==='parcial';
+ $('returnpartial').classList.toggle('hidden',!partial);
+ $('savereturn').textContent=partial?'Registrar devolução parcial':'Registrar devolução total';
+ const pending=pendingMovements(selectedReturnProcess);
+ const sum=pending.reduce((n,m)=>n+m.quantidade_enviada-received(m.id),0);
+ $('returnsummary').textContent=partial?
+  'Ajuste as quantidades abaixo. Existem '+sum+' peça(s) pendente(s) nesta etapa.':
+  'Serão devolvidas e aprovadas automaticamente '+sum+' peça(s), de todos os tamanhos pendentes, em um único lançamento.';
+}
+function openReturnProcess(processId){
+ const step=etapas.find(e=>e.id===processId);if(!step)return;
+ const pending=pendingMovements(processId);if(!pending.length){message('Esta etapa não tem peças pendentes de devolução.',true);return}
+ selectedReturnProcess=processId;
+ const product=findProduct(step.produto_id);
+ $('returntitle').textContent='Devolução · '+step.nome;
+ $('returnhint').textContent=product?.descricao||'';
  $('returnform').reset();
- $('returnform').elements.quantidade_recebida.max=String(saldo);
- $('returnform').elements.quantidade_recebida.value=String(saldo);
- $('returnform').elements.quantidade_aprovada.value=String(saldo);
  $('returnform').elements.devolvido_em.value=today();
+ $('return_mode').value='total';
+ $('returnrows').innerHTML=pending.map(m=>{
+  const t=grades.find(g=>g.id===m.produto_tamanho_id),f=faccoes.find(x=>x.id===m.faccao_id);
+  const balance=m.quantidade_enviada-received(m.id);
+  return '<div class="return-partial-row" data-mov="'+esc(m.id)+'">'+
+   '<strong>Tamanho '+esc(t?.tamanho||'—')+'</strong><div class="muted">'+esc(f?.nome||'Operação interna')+
+   ' · Enviado em '+esc(m.enviado_em)+' · Saldo pendente: '+balance+'</div>'+
+   '<div class="grid"><label>Devolvidas<input class="return-qty" type="number" step="1" min="0" max="'+balance+'" value="'+balance+'"></label>'+
+   '<label>Aprovadas<input class="return-approved" type="number" step="1" min="0" max="'+balance+'" value="'+balance+'"></label></div></div>';
+ }).join('');
+ $('returnrows').querySelectorAll('.return-partial-row').forEach(row=>{
+  row.querySelector('.return-qty').oninput=e=>{
+   const input=row.querySelector('.return-approved');input.max=e.target.value;
+   if(Number(input.value)>Number(e.target.value))input.value=e.target.value;
+  };
+ });
+ setReturnMode();
  $('returndialog').showModal();
 }
-$('returnform').elements.quantidade_recebida.oninput=e=>{
- const x=$('returnform').elements.quantidade_aprovada;x.max=e.target.value;if(Number(x.value)>Number(e.target.value))x.value=e.target.value;
-};
-$('cancelreturn').onclick=()=>$('returndialog').close();
+$('return_mode').onchange=setReturnMode;
+$('cancelreturn').onclick=()=>{$('returndialog').close();selectedReturnProcess=null};
 $('returnform').onsubmit=async e=>{
- e.preventDefault();const f=e.target,btn=$('savereturn');busy(btn,true,'Registrar devolução');
+ e.preventDefault();const f=e.target,btn=$('savereturn'),partial=$('return_mode').value==='parcial';
+ const label=partial?'Registrar devolução parcial':'Registrar devolução total';
+ busy(btn,true,label);
  try{
-  const {error}=await db.rpc('zz2_registrar_retorno',{
-   p_movimentacao_id:selectedMovement,p_quantidade_recebida:Number(f.elements.quantidade_recebida.value),
-   p_quantidade_aprovada:Number(f.elements.quantidade_aprovada.value),
-   p_devolvido_em:f.elements.devolvido_em.value,p_observacoes:f.elements.observacoes.value.trim()||null
+  const itens=partial?[...$('returnrows').querySelectorAll('[data-mov]')].map(row=>{
+   const quantidade=Number(row.querySelector('.return-qty').value);
+   const aprovada=Number(row.querySelector('.return-approved').value);
+   const saldo=movimentos.find(m=>m.id===row.dataset.mov).quantidade_enviada-received(row.dataset.mov);
+   if(!Number.isInteger(quantidade)||!Number.isInteger(aprovada)||quantidade<0||quantidade>saldo||
+    aprovada<0||aprovada>quantidade)throw Error('Confira as quantidades devolvidas e aprovadas de cada tamanho.');
+   return {movimentacao_id:row.dataset.mov,quantidade_recebida:quantidade,quantidade_aprovada:aprovada};
+  }):[];
+  if(partial&&!itens.some(item=>item.quantidade_recebida>0))throw Error('Informe pelo menos uma peça devolvida.');
+  const {data,error}=await db.rpc('zz2_registrar_retorno_lote',{
+    p_processo_id:selectedReturnProcess,p_modo:partial?'parcial':'total',p_itens:itens,
+    p_devolvido_em:f.elements.devolvido_em.value,p_observacoes:f.elements.observacoes.value.trim()||null
   });if(error)throw error;
-  $('returndialog').close();await load();message('Devolução registrada com quantidades aprovadas/rejeitadas.');
- }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar devolução')}
+  $('returndialog').close();selectedReturnProcess=null;
+  await load();message(data+' peça(s) registradas na devolução '+(partial?'parcial':'total')+'.');
+ }catch(err){message(err.message,true)}finally{busy(btn,false,label)}
 };
 init();
 </script></body></html>
