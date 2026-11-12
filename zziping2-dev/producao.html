@@ -13,9 +13,10 @@
 <dialog id="cutdialog"><h2 id="cuttitle">Concluir corte</h2><p class="muted">Informe a quantidade efetivamente cortada por tamanho. O sistema registrará como reserva toda quantidade excedente à vendida. O corte completo não pode ser lançado duas vezes.</p>
 <form id="cutform"><div id="cutrows"></div><div class="actions"><button id="savecut" type="submit">Concluir corte</button><button type="button" class="secondary" id="cancelcut">Cancelar</button></div></form></dialog>
 <dialog id="senddialog"><h2 id="sendtitle">Enviar para processo</h2><p id="sendhint" class="muted"></p>
-<form id="sendform"><div class="grid"><label>Tamanho<select name="tamanho_id" id="send_size" required></select></label><label>Quantidade<input name="quantidade" type="number" min="1" step="1" required></label></div>
+<form id="sendform"><label>Como deseja enviar?<select id="send_mode"><option value="todos">Todos os tamanhos disponíveis (envio completo)</option><option value="unico">Um tamanho específico (envio parcial)</option></select></label>
+<p id="send_batch_info" class="muted"></p><div id="send_single_fields" class="grid hidden"><label>Tamanho<select name="tamanho_id" id="send_size"></select></label><label>Quantidade<input name="quantidade" type="number" min="1" step="1"></label></div>
 <div class="grid"><label>Facção / Prestador<select name="faccao_id" id="send_faccao"><option value="">Sem facção (operação interna)</option></select></label><label>Data de envio<input name="enviado_em" type="date" required></label></div>
-<label>Prazo previsto da devolução (opcional)<input name="prazo_previsto" type="date"></label>
+<label>Prazo previsto da devolução (preenchido automaticamente; pode ajustar)<input name="prazo_previsto" type="date"></label><p id="send_deadline_info" class="muted"></p>
 <div class="actions"><button id="savesend" type="submit">Registrar envio</button><button class="secondary" id="cancelsend" type="button">Cancelar</button></div></form></dialog>
 <dialog id="returndialog"><h2>Registrar devolução</h2><p id="returnhint" class="muted"></p>
 <form id="returnform"><div class="grid"><label>Peças devolvidas<input name="quantidade_recebida" type="number" min="1" required></label><label>Peças aprovadas<input name="quantidade_aprovada" type="number" min="0" required></label></div>
@@ -30,6 +31,36 @@ const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=
 let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null;
 let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+function addBusinessDays(iso,days){
+ const parts=(iso||'').split('-').map(Number);
+ if(parts.length!==3||!parts.every(Number.isFinite))return '';
+ const d=new Date(Date.UTC(parts[0],parts[1]-1,parts[2],12));
+ if(!Number.isInteger(days)||days<0||days>9999)return '';
+ let count=0;
+ while(count<days){d.setUTCDate(d.getUTCDate()+1);if(d.getUTCDay()!==0&&d.getUTCDay()!==6)count++}
+ return d.toISOString().slice(0,10);
+}
+function updateSendMode(){
+ const single=$('send_mode').value==='unico',stage=etapas.find(x=>x.id===selectedProcess),p=findProduct(stage?.produto_id);
+ $('send_single_fields').classList.toggle('hidden',!single);
+ $('send_size').required=single;
+ $('sendform').elements.quantidade.required=single;
+ const qty=relatedSizes(p?.id).reduce((n,t)=>n+available(t.id,selectedProcess),0);
+ $('send_batch_info').textContent=single?'Selecione um tamanho e uma quantidade. Disponíveis por tamanho na lista.':
+  'Serão enviadas '+qty+' peça(s) disponíveis, de todos os tamanhos, com um único lançamento. O sistema mantém o histórico separado por tamanho.';
+}
+function updateSendDeadline(){
+ const step=etapas.find(x=>x.id===selectedProcess);
+ const days=step?.prazo_dias_uteis;
+ const due=$('sendform').elements.prazo_previsto;
+ due.value=Number.isInteger(days)?addBusinessDays($('sendform').elements.enviado_em.value,days):'';
+ $('send_deadline_info').textContent=Number.isInteger(days)?
+  'Prazo configurado nesta etapa: '+days+' dia(s) útil(eis), contados a partir do dia seguinte ao envio, de segunda a sexta-feira (feriados ainda não configurados).':
+  'Esta etapa não possui prazo cadastrado. Informe uma previsão, se necessário.';
+}
+$('send_mode').onchange=updateSendMode;
+$('sendform').elements.enviado_em.onchange=updateSendDeadline;
+
 const message=(m,error=false)=>{$('notice').textContent=m||'';$('notice').className=error?'error':'good'};
 function has(k){return !!profile?.ativo&&(profile.papel==='administrador'||!!rights?.[k])}
 function show(k,v){$(k).classList.toggle('hidden',!v)}
@@ -134,29 +165,44 @@ $('cutform').onsubmit=async e=>{
  }catch(e){message(e.message,true)}finally{busy(btn,false,'Concluir corte')}
 };
 function openSend(id){
- const s=etapas.find(x=>x.id===id),pr=findProduct(s?.produto_id);
- if(!s||!pr)return;selectedProcess=id;
- $('sendtitle').textContent='Enviar · '+s.nome;
- $('sendhint').textContent='Produto: '+pr.descricao+' · Etapa '+s.ordem+'. Quantidades disponíveis calculadas considerando cortes e retornos aprovados.';
- const opts=relatedSizes(pr.id).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.tamanho)+' · '+available(t.id,id)+' disponíveis</option>');
- $('send_size').innerHTML=opts.join('');
- $('send_faccao').innerHTML='<option value="">Sem facção / Interno</option>'+faccoes.filter(f=>f.ativo).map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
- $('sendform').reset();$('send_size').innerHTML=opts.join('');
- $('sendform').elements.enviado_em.value=today();
- $('send_faccao').required=s.origem==='facção';
- $('send_faccao').disabled=s.origem==='interno';
+ const stage=etapas.find(x=>x.id===id),product=findProduct(stage?.produto_id);
+ if(!stage||!product)return;selectedProcess=id;
+ $('sendtitle').textContent='Enviar · '+stage.nome;
+ $('sendhint').textContent='Produto: '+product.descricao+' · Etapa '+stage.ordem+
+ '. Quantidades disponíveis calculadas pelos cortes e retornos aprovados.';
+ const opts=relatedSizes(product.id).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.tamanho)+' · '+available(t.id,id)+' disponíveis</option>').join('');
+ const f=$('sendform');f.reset();
+ $('send_size').innerHTML=opts;
+ $('send_faccao').innerHTML='<option value="">Sem facção / Interno</option>'+
+  faccoes.filter(x=>x.ativo).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
+ f.elements.enviado_em.value=today();
+ $('send_mode').value='todos';
+ $('send_faccao').required=stage.origem==='facção';
+ $('send_faccao').disabled=stage.origem==='interno';
+ $('send_faccao').value='';
+ updateSendMode();updateSendDeadline();
  $('senddialog').showModal();
 }
 $('cancelsend').onclick=()=>$('senddialog').close();
 $('sendform').onsubmit=async e=>{
  e.preventDefault();const f=e.target,btn=$('savesend');busy(btn,true,'Registrar envio');
  try{
-  const {error}=await db.rpc('zz2_enviar_processo',{
-   p_tamanho_id:f.elements.tamanho_id.value,p_processo_id:selectedProcess,
-   p_quantidade:Number(f.elements.quantidade.value),p_faccao_id:f.elements.faccao_id.value||null,
-   p_enviado_em:f.elements.enviado_em.value,p_prazo_previsto:f.elements.prazo_previsto.value||null
-  });if(error)throw error;
-  $('senddialog').close();await load();message('Envio registrado. Aguarde o retorno ou registre devolução parcial.');
+  const common={p_processo_id:selectedProcess,p_faccao_id:f.elements.faccao_id.value||null,
+   p_enviado_em:f.elements.enviado_em.value,p_prazo_previsto:f.elements.prazo_previsto.value||null};
+  let count;
+  if($('send_mode').value==='todos'){
+   const {data,error}=await db.rpc('zz2_enviar_processo_lote',common);
+   if(error)throw error;
+   count=data;
+  }else{
+   const {error}=await db.rpc('zz2_enviar_processo',{...common,
+    p_tamanho_id:f.elements.tamanho_id.value,
+    p_quantidade:Number(f.elements.quantidade.value)});
+   if(error)throw error;
+   count=Number(f.elements.quantidade.value);
+  }
+  $('senddialog').close();await load();
+  message(count+' peça(s) enviadas para '+etapas.find(x=>x.id===selectedProcess)?.nome+'. Os tamanhos ficam registrados separadamente.');
  }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar envio')}
 };
 function openReturn(id){
