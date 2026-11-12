@@ -117,7 +117,7 @@ function render(){
  $('orders').innerHTML=orders.filter(o=>[o.numero_externo,o.cliente_nome_livre,clientName(o),o.observacoes].join(' ').toLowerCase().includes(q))
  .map(o=>{
   const items=products.filter(p=>p.pedido_id===o.id),total=items.reduce((n,x)=>n+x.quantidade_vendida,0);
-  return '<div class="list-row"><div><strong>Pedido '+esc(o.numero_externo)+'</strong><small>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.prioridade)+' · Entrega '+moneyDate(o.prazo_entrega)+'</small><small>'+items.length+' produto(s) · '+total+' peça(s) vendida(s) · Rascunho</small></div><button class="secondary" data-open="'+esc(o.id)+'">Detalhes</button></div>'
+  return '<div class="list-row"><div><strong>Pedido '+esc(o.numero_externo)+'</strong><small>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.prioridade)+' · Entrega '+moneyDate(o.prazo_entrega)+'</small><small>'+items.length+' produto(s) · '+total+' peça(s) vendida(s) · '+esc(o.status==='pronto'?'Pronto':o.status==='em_producao'?'Em produção':'Rascunho')+'</small></div><button class="secondary" data-open="'+esc(o.id)+'">Detalhes</button></div>'
  }).join('')||'<p class="muted">Nenhum pedido encontrado. Cadastre um novo pedido para começar.</p>';
 }
 function clientName(o){return clients.find(c=>c.id===o.cliente_id)?.nome||''}
@@ -125,6 +125,7 @@ function meta(o){return '<dl><dt>Número externo</dt><dd>'+esc(o.numero_externo)
 async function openOrder(id,scroll=true){
  const o=orders.find(v=>v.id===id);if(!o){selected=null;show('detail',false);return}
  selected=id;show('detail',true);$('detailtitle').textContent='Pedido '+o.numero_externo;
+ $('newproduct').classList.toggle('hidden',!write||o.status!=='rascunho');
  $('detailmeta').innerHTML=meta(o);
  const items=products.filter(v=>v.pedido_id===id);
  $('productlist').innerHTML=items.map(p=>{
