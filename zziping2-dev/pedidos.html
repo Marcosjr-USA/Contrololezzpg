@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZZIPING 2.0 • Pedidos</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#202732}
+*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:#fff;padding:18px 5%;border-bottom:4px solid #bc1e30}
+header h1{font-size:23px;margin:0}header small{color:#cbd0d7}
+.shell{max-width:1130px;margin:auto;padding:14px}.card{background:white;border-radius:13px;border:1px solid #dfe1e5;margin:12px 0;padding:19px;box-shadow:0 2px 10px #00000006}
+.note{padding:13px 15px;border:1px solid #e9c36d;background:#fff2d8;border-radius:9px;font-size:14px}
+a{color:#ac182c}a.button{display:inline-block;text-decoration:none;background:#303641;color:white;border-radius:8px;padding:11px 14px;min-height:42px}
+button{background:#b51b30;color:#fff;border:0;border-radius:8px;padding:11px 15px;cursor:pointer;font:inherit;min-height:42px}
+button:disabled{opacity:.5;cursor:wait}.secondary{background:#e9ebef;color:#202732}
+input,select,textarea{display:block;width:100%;min-height:42px;border:1px solid #c6cad2;border-radius:8px;padding:10px;margin:5px 0 12px;font:inherit;background:white}
+label{display:block;font-size:14px;font-weight:600}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.muted{color:#64707e;font-size:13px}.hidden{display:none!important}
+#notice{margin:10px 0;white-space:pre-wrap}#notice:empty{display:none}.error{color:#b11327}.good{color:#137748}
+.list-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #ebedf0;padding:14px 0}
+.list-row>div:first-child{flex:1;min-width:180px}.list-row strong{display:block}.list-row small{display:block;color:#65717d}
+.pill{display:inline-block;background:#fce8eb;color:#9b1b2e;padding:5px 9px;border-radius:30px;font-weight:700;font-size:12px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#f6f0f1;padding:9px 14px;border-radius:9px}.stat b{display:block;font-size:20px}
+h2{font-size:20px;margin:0 0 13px}h3{font-size:17px;margin:12px 0}
+.grade-line,.step-line{display:grid;grid-template-columns:1fr 135px auto;gap:9px;align-items:center;border-top:1px solid #edf0f3;padding:8px 0}
+.step-line{grid-template-columns:38px 1fr 155px 115px auto}.grade-line input,.step-line input,.step-line select{margin:0}
+.item{padding:15px;border:1px solid #e3e6ec;border-radius:10px;margin:12px 0;background:#fcfcfd}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:5px 11px;font-size:14px}dt{color:#667080}dd{margin:0;overflow-wrap:anywhere}
+code{font-size:12px}dialog{width:min(750px,calc(100% - 20px));max-height:90vh;border-radius:14px;border:1px solid #d5d9e0;padding:20px}
+dialog::backdrop{background:#111a27a8}.foot{color:#66707a;font-size:12px;margin:22px 0}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:14px}.grade-line{grid-template-columns:1fr 85px auto}.step-line{grid-template-columns:24px 1fr 86px;gap:5px}.step-line .prazo{grid-column:2}.step-line .remover{grid-column:3}.stat{flex:1}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head><body>
+<header><div class="top"><div><h1>ZZIPING 2.0 · Pedidos</h1><small>Módulo 2 — Pedidos, produtos, tamanhos e processos</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
+<main class="shell">
+<div class="note">Esta área pertence apenas à ZZIPING 2.0. Os pedidos serão registrados como <b>rascunhos</b>; não são enviados à produção nem ao financeiro nesta fase. A ZZIPING 1.0 permanece separada.</div>
+<p id="notice" role="status" aria-live="polite"></p>
+<div class="card top"><div><a class="button" href="index.html">← Voltar ao Módulo 1</a> <span id="identity" class="muted"></span></div><span id="access" class="muted">Validando acesso...</span></div>
+<section id="blocked" class="card hidden"><h2>Entrar na ZZIPING 2.0</h2><p id="blockedmsg">É necessário ter uma sessão ativa e permissão para acessar pedidos.</p><a href="index.html" class="button">Abrir página de login</a></section>
+<section id="work" class="hidden">
+<div class="card"><div class="top"><h2>Pedidos de produção</h2><button id="neworder">+ Novo pedido</button></div>
+<div class="stats"><span class="stat">Pedidos <b id="norders">0</b></span><span class="stat">Produtos <b id="nproducts">0</b></span><span class="stat">Peças vendidas <b id="npieces">0</b></span></div>
+<label>Pesquisar por número, cliente ou observação<input id="search" type="search" placeholder="Ex.: 2026-015 ou Abrafer"></label>
+<div id="orders"></div></div>
+<section id="detail" class="card hidden"><div class="top"><h2 id="detailtitle">Pedido</h2><button class="secondary" id="closedetail">Fechar detalhes</button></div><div id="detailmeta"></div><div class="top"><h3>Produtos deste pedido</h3><button id="newproduct">+ Adicionar produto</button></div><div id="productlist"></div></section>
+</section>
+<dialog id="orderdialog"><div class="top"><h2>Novo pedido · rascunho</h2><button class="secondary" type="button" id="closeorder">Fechar</button></div><form id="orderform">
+<div class="grid"><label>Número do pedido externo*<input name="numero_externo" required maxlength="80" placeholder="Ex.: 10527"></label>
+<label>Cliente cadastrado (opcional)<select name="cliente_id" id="cliente_id"><option value="">Escolher ou informar abaixo</option></select></label></div>
+<label>Cliente avulso / nome de referência<input name="cliente_nome_livre" maxlength="200" placeholder="Pode cadastrar um pedido sem cadastro completo do cliente"></label>
+<div class="grid"><label>Prioridade<select name="prioridade"><option value="normal">Normal</option><option value="urgente">Urgente</option><option value="maxima">Máxima</option></select></label>
+<label>Prazo de entrega*<input name="prazo_entrega" type="date" required></label></div>
+<label>Observações<textarea name="observacoes" rows="2"></textarea></label><div class="actions"><button type="submit" id="saveorder">Salvar pedido</button><button type="button" class="secondary" id="cancelorder">Cancelar</button></div></form></dialog>
+<dialog id="productdialog"><div class="top"><h2>Adicionar produto ao pedido</h2><button class="secondary" id="closeproduct" type="button">Fechar</button></div>
+<form id="productform"><label>Produto / descrição*<input name="descricao" required minlength="2" maxlength="240" placeholder="Ex.: Camisa polo bordada"></label>
+<div class="grid"><label>Tipo de grade<select name="grade_tipo"><option value="letras">Letras — P, M, G...</option><option value="numerica">Numérica — 36, 38, 40...</option><option value="personalizada">Personalizada</option></select></label>
+<label>Observações do produto<input name="observacoes" placeholder="Tecido, cor, particularidades..."></label></div>
+<h3>Grade de tamanhos · quantidade vendida</h3><p class="muted">Cada tamanho pode ter sua própria quantidade. O total vendido é calculado automaticamente.</p>
+<div id="grades"></div><div class="actions"><button type="button" class="secondary" id="addgrade">+ Tamanho</button><span id="gradetotal" class="pill">Total vendido: 0</span></div>
+<h3>Sequência de produção</h3><p class="muted"><b>1. Corte</b> é incluído automaticamente como etapa interna. Selecione as demais etapas na ordem em que devem ocorrer.</p>
+<div id="steps"></div><button type="button" class="secondary" id="addstep">+ Adicionar processo</button>
+<p class="muted">Os prazos de cada processo são apenas planejados; os movimentos e a conferência serão implementados depois.</p>
+<div class="actions"><button type="submit" id="saveproduct">Salvar produto + grade + processos</button><button type="button" class="secondary" id="cancelproduct">Cancelar</button></div></form>
+</dialog>
+<div class="foot">ZZIPING 2.0 · Módulo 2 · Rascunhos e estrutura de processos · Nenhum dado da 1.0 migrado</div>
+</main>
+<script>
+'use strict';
+const SB_URL='https://clgsozqaahxiwunvrkra.supabase.co';
+const SB_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const moneyDate=d=>d?d.split('-').reverse().join('/'):'—';
+const dateNow=()=>{const d=new Date(),local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
+let db=null,session=null,me=null,perms=null,selected=null,write=false;
+let clients=[],types=[],orders=[],products=[],sizes=[],stages=[];
+function msg(t,isError=false){$('notice').textContent=t||'';$('notice').className=isError?'error':'good'}
+function show(id,on){$(id).classList.toggle('hidden',!on)}
+function guard(error){msg(error?.message||String(error),true)}
+function needClient(){return $("cliente_id").value||$("orderform").elements.cliente_nome_livre.value.trim()}
+async function query(name){const {data,error}=await db.from(name).select('*');if(error)throw error;return data||[]}
+async function start(){
+ try{
+  if(!window.supabase?.createClient)throw Error('Biblioteca Supabase não carregou. Atualize a página (Ctrl + F5).');
+  db=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+  const {data:{session:sess},error}=await db.auth.getSession();if(error)throw error;
+  if(!sess){show('blocked',true);$('blockedmsg').textContent='Faça login no Módulo 1 para abrir os pedidos.';return}
+  session=sess;
+  const [p,x]=await Promise.all([db.from('usuarios').select('*').eq('id',sess.user.id).maybeSingle(),db.from('permissoes_usuario').select('*').eq('usuario_id',sess.user.id).maybeSingle()]);
+  if(p.error)throw p.error;if(x.error)throw x.error;
+  me=p.data;perms=x.data;
+  const canRead=!!me?.ativo&&(me.papel==='administrador'||perms?.pedidos_visualizar);
+  if(!canRead){show('blocked',true);$('blockedmsg').textContent='Sua conta não tem permissão de leitura de pedidos.';return}
+  write=me.papel==='administrador'||!!perms?.pedidos_editar;
+  $('identity').textContent=me.nome;
+  $('access').textContent=write?'Pedidos: leitura e edição':'Pedidos: somente consulta';
+  $('neworder').classList.toggle('hidden',!write);
+  $('newproduct').classList.toggle('hidden',!write);
+  show('work',true);await load();
+ }catch(e){show('blocked',true);$('blockedmsg').textContent='Não foi possível iniciar: '+(e.message||e);guard(e)}
+}
+async function load(keepNotice=false){
+ try{
+  const result=await Promise.all([query('clientes'),query('tipos_servico'),query('pedidos'),query('pedido_produtos'),query('produto_tamanhos'),query('produto_processos')]);
+  [clients,types,orders,products,sizes,stages]=result;
+  orders.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
+  render();
+  if(selected)await openOrder(selected,false);
+  if(!keepNotice)msg('Pedidos sincronizados com o banco de desenvolvimento.');
+ }catch(e){guard(e)}
+}
+function render(){
+ $('norders').textContent=orders.length;$('nproducts').textContent=products.length;
+ $('npieces').textContent=products.reduce((n,p)=>n+p.quantidade_vendida,0);
+ const q=$('search').value.trim().toLowerCase();
+ $('orders').innerHTML=orders.filter(o=>[o.numero_externo,o.cliente_nome_livre,clientName(o),o.observacoes].join(' ').toLowerCase().includes(q))
+ .map(o=>{
+  const items=products.filter(p=>p.pedido_id===o.id),total=items.reduce((n,x)=>n+x.quantidade_vendida,0);
+  return '<div class="list-row"><div><strong>Pedido '+esc(o.numero_externo)+'</strong><small>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.prioridade)+' · Entrega '+moneyDate(o.prazo_entrega)+'</small><small>'+items.length+' produto(s) · '+total+' peça(s) vendida(s) · Rascunho</small></div><button class="secondary" data-open="'+esc(o.id)+'">Detalhes</button></div>'
+ }).join('')||'<p class="muted">Nenhum pedido encontrado. Cadastre um novo pedido para começar.</p>';
+}
+function clientName(o){return clients.find(c=>c.id===o.cliente_id)?.nome||''}
+function meta(o){return '<dl><dt>Número externo</dt><dd>'+esc(o.numero_externo)+'</dd><dt>Cliente</dt><dd>'+esc(clientName(o)||o.cliente_nome_livre||'—')+'</dd><dt>Prioridade</dt><dd>'+esc(o.prioridade)+'</dd><dt>Entrega</dt><dd>'+moneyDate(o.prazo_entrega)+'</dd><dt>Status</dt><dd>Rascunho — ainda sem lançamento de produção</dd><dt>Observações</dt><dd>'+esc(o.observacoes||'—')+'</dd></dl>'}
+async function openOrder(id,scroll=true){
+ const o=orders.find(v=>v.id===id);if(!o){selected=null;show('detail',false);return}
+ selected=id;show('detail',true);$('detailtitle').textContent='Pedido '+o.numero_externo;
+ $('detailmeta').innerHTML=meta(o);
+ const items=products.filter(v=>v.pedido_id===id);
+ $('productlist').innerHTML=items.map(p=>{
+  const grade=sizes.filter(s=>s.produto_id===p.id);
+  const steps=stages.filter(s=>s.produto_id===p.id).sort((a,b)=>a.ordem-b.ordem);
+  return '<div class="item"><div class="top"><strong>'+esc(p.descricao)+'</strong><span class="pill">'+p.quantidade_vendida+' peças vendidas</span></div><small class="muted">Grade: '+esc(p.grade_tipo)+'</small><p><b>Tamanhos:</b> '+grade.map(g=>esc(g.tamanho)+' ('+g.quantidade_vendida+')').join(' · ')+'</p><p><b>Processos:</b> '+steps.map(x=>x.ordem+'. '+esc(x.nome)+(x.prazo_dias_uteis===null?'':' ('+x.prazo_dias_uteis+' dias úteis)')).join(' → ')+'</p>'+ (p.observacoes?'<p class="muted">'+esc(p.observacoes)+'</p>':'')+'</div>'
+ }).join('')||'<p class="muted">Ainda não há produtos. Use “Adicionar produto” para criar grades e processos.</p>';
+ if(scroll)$('detail').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function clearOrder(){
+ $('orderform').reset();
+ const sel=$('cliente_id');sel.innerHTML='<option value="">Escolher ou informar abaixo</option>'+clients.filter(c=>c.ativo).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>').join('');
+ $('orderform').elements.prazo_entrega.value=dateNow();
+}
+function gradeLine(label='',qty=''){
+ const row=document.createElement('div');row.className='grade-line';
+ row.innerHTML='<label>Tamanho<input class="size" maxlength="40" required placeholder="P, M, 42..." value="'+esc(label)+'"></label><label>Quantidade<input class="qty" type="number" min="1" max="9999999" required value="'+esc(qty)+'"></label><button type="button" class="secondary remove-grade">×</button>';
+ row.querySelector('.remove-grade').onclick=()=>{row.remove();updateTotal()};
+ row.querySelector('.qty').oninput=updateTotal;
+ $('grades').append(row);updateTotal();
+}
+function updateTotal(){
+ const total=[...$('grades').querySelectorAll('.qty')].reduce((n,input)=>n+(Number(input.value)||0),0);
+ $('gradetotal').textContent='Total vendido: '+total;
+}
+function typeOptions(){
+ return '<option value="">Selecione um tipo</option>'+types.filter(x=>x.ativo&&x.nome.trim().toLowerCase()!=='corte').map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
+}
+function stepLine(){
+ const row=document.createElement('div');row.className='step-line';
+ row.innerHTML='<span class="step-num"></span><select class="step-type" required>'+typeOptions()+'</select><select class="step-origin"><option value="a_definir">A definir</option><option value="facção">Facção</option><option value="interno">Interno</option></select><input class="prazo" type="number" min="0" max="9999" placeholder="Dias úteis" aria-label="Prazo em dias úteis"><button class="secondary remover" type="button">×</button>';
+ row.querySelector('.remover').onclick=()=>{row.remove();numberSteps()};
+ $('steps').append(row);numberSteps();
+}
+function numberSteps(){[...$('steps').children].forEach((e,i)=>e.querySelector('.step-num').textContent=i+2)}
+function clearProduct(){
+ $('productform').reset();$('grades').innerHTML='';$('steps').innerHTML='';
+ for(const size of ['P','M','G'])gradeLine(size,'');
+}
+function collectGrades(){
+ const arr=[...$('grades').children].map(e=>({tamanho:e.querySelector('.size').value.trim(),quantidade:Number(e.querySelector('.qty').value)}));
+ if(!arr.length)throw Error('Adicione pelo menos um tamanho');
+ if(arr.some(a=>!a.tamanho||!Number.isInteger(a.quantidade)||a.quantidade<1))throw Error('Preencha tamanho e quantidade positiva em todas as linhas');
+ if(new Set(arr.map(a=>a.tamanho.toLowerCase())).size!==arr.length)throw Error('Existem tamanhos repetidos na grade');
+ return arr;
+}
+function collectSteps(){
+ return [...$('steps').children].map(row=>{
+  const id=row.querySelector('.step-type').value,selectedType=types.find(x=>x.id===id);
+  if(!selectedType)throw Error('Selecione um tipo de serviço para cada processo');
+  const value=row.querySelector('.prazo').value;
+  if(value!==''&&(!/^\d+$/.test(value)||Number(value)>9999))throw Error('Prazo em dias úteis inválido');
+  return {nome:selectedType.nome,tipo_servico_id:selectedType.id,origem:row.querySelector('.step-origin').value,prazo_dias_uteis:value===''?null:Number(value)};
+ });
+}
+function busy(button,on,text){button.disabled=on;button.textContent=on?'Salvando...':text}
+$('neworder').onclick=()=>{clearOrder();$('orderdialog').showModal()};
+$('closeorder').onclick=$('cancelorder').onclick=()=>$('orderdialog').close();
+$('newproduct').onclick=()=>{clearProduct();$('productdialog').showModal()};
+$('closeproduct').onclick=$('cancelproduct').onclick=()=>$('productdialog').close();
+$('closedetail').onclick=()=>{selected=null;show('detail',false)};
+$('addgrade').onclick=()=>gradeLine();
+$('addstep').onclick=()=>{if(!types.some(t=>t.ativo&&t.nome.toLowerCase()!=='corte'))return msg('Cadastre um tipo de serviço no Módulo 1 antes de adicioná-lo ao produto.',true);stepLine()};
+$('search').oninput=render;
+$('orders').onclick=e=>{const button=e.target.closest('[data-open]');if(button)openOrder(button.dataset.open)};
+$('orderform').onsubmit=async e=>{
+ e.preventDefault();if(!write)return;
+ const f=e.currentTarget,btn=$('saveorder');busy(btn,true);
+ try{
+  if(!needClient())throw Error('Selecione um cliente cadastrado ou informe o nome do cliente avulso');
+  const data={numero_externo:f.elements.numero_externo.value.trim(),cliente_id:f.elements.cliente_id.value||null,
+   cliente_nome_livre:f.elements.cliente_nome_livre.value.trim()||null,prioridade:f.elements.prioridade.value,
+   prazo_entrega:f.elements.prazo_entrega.value,observacoes:f.elements.observacoes.value.trim()||null,criado_por:session.user.id};
+  const {data:inserted,error}=await db.from('pedidos').insert(data).select('id').single();
+  if(error)throw error;
+  $('orderdialog').close();await load(true);await openOrder(inserted.id);msg('Pedido rascunho salvo. Agora adicione produtos, tamanhos e processos.');
+ }catch(e){guard(e)}finally{busy(btn,false,'Salvar pedido')}
+};
+$('productform').onsubmit=async e=>{
+ e.preventDefault();if(!write||!selected)return;
+ const f=e.currentTarget,btn=$('saveproduct');busy(btn,true);
+ try{
+  const grade=collectGrades(),processos=collectSteps();
+  const {data,error}=await db.rpc('zz2_adicionar_produto',{
+   p_pedido_id:selected,p_descricao:f.elements.descricao.value.trim(),
+   p_grade_tipo:f.elements.grade_tipo.value,p_tamanhos:grade,p_processos:processos,
+   p_observacoes:f.elements.observacoes.value.trim()||null
+  });if(error)throw error;if(!data)throw Error('Produto não foi criado');
+  $('productdialog').close();await load(true);msg('Produto, grade e processos salvos com sucesso.');
+ }catch(e){guard(e)}finally{busy(btn,false,'Salvar produto + grade + processos')}
+};
+start();
+</script></body></html>
