@@ -1,6 +1,16 @@
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 • Produção</title>
 <style>
-:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#1f2630}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:white;border-bottom:4px solid #bc1c30;padding:16px 5%}h1{margin:0;font-size:23px}header small{color:#c9cbd0}.shell{max-width:1100px;margin:auto;padding:13px}.card{background:white;padding:17px;border:1px solid #e0e3e8;border-radius:12px;margin:12px 0}.warn{background:#fff2d8;border:1px solid #edc578;border-radius:8px;padding:12px;font-size:14px}button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0;background:#b61b30;color:white;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;min-height:42px}button.secondary,.button.secondary{background:#e8ebef;color:#242b35}button:disabled{opacity:.5;cursor:not-allowed}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.muted{font-size:13px;color:#687281}.hidden{display:none!important}.good{color:#087a43}.error{color:#bc1b30}#notice{white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;font-weight:600}input,select,textarea{width:100%;padding:10px;min-height:41px;border:1px solid #c8cdd5;border-radius:8px;font:inherit;margin:5px 0 11px;background:white}.row{border-top:1px solid #e9ebee;padding:12px 0}.item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}dialog{border:1px solid #ccd2d9;border-radius:13px;padding:18px;width:min(640px,calc(100% - 20px));max-height:88vh}dialog::backdrop{background:#1018279c}.foot{font-size:12px;color:#667282;margin:28px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:12px}h1{font-size:19px}.cutrow{grid-template-columns:1fr 110px}}
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#1f2630}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:white;border-bottom:4px solid #bc1c30;padding:16px 5%}h1{margin:0;font-size:23px}header small{color:#c9cbd0}.shell{max-width:1100px;margin:auto;padding:13px}.card{background:white;padding:17px;border:1px solid #e0e3e8;border-radius:12px;margin:12px 0}.warn{background:#fff2d8;border:1px solid #edc578;border-radius:8px;padding:12px;font-size:14px}button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0;background:#b61b30;color:white;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;min-height:42px}button.secondary,.button.secondary{background:#e8ebef;color:#242b35}button:disabled{opacity:.5;cursor:not-allowed}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.muted{font-size:13px;color:#687281}.hidden{display:none!important}.good{color:#087a43}.error{color:#bc1b30}#notice{white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;font-weight:600}input,select,textarea{width:100%;padding:10px;min-height:41px;border:1px solid #c8cdd5;border-radius:8px;font:inherit;margin:5px 0 11px;background:white}.row{border-top:1px solid #e9ebee;padding:12px 0}.stage-row{border-left:4px solid #b5bbc3;padding-left:10px}.stage-row.status-progress{border-left-color:#dc860f;background:#fffaf0}.stage-row.status-done{border-left-color:#23864e;background:#f3fbf6}.stage-row.status-late{border-left-color:#c82d36;background:#fff5f5}
+.status-chip{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;border-radius:6px;padding:5px 8px;vertical-align:middle;background:#e8ebef;color:#353f4b}
+.status-chip.status-progress{background:#ffedc4;color:#86500c}.status-chip.status-done{background:#d8f2df;color:#116d37}.status-chip.status-late{background:#fbdadd;color:#9b1b28}
+button.secondary.stage-action{font-weight:700;border:1px solid transparent}
+button.secondary.stage-action.status-idle{background:#e8ebef;color:#303945}
+button.secondary.stage-action.status-progress{background:#de8b18;color:#1c160b}
+button.secondary.stage-action.status-done{background:#228448;color:white}
+button.secondary.stage-action.status-late{background:#bf2934;color:white}
+button.secondary.stage-action:disabled{opacity:1;cursor:default}
+button.secondary.stage-action.status-progress:disabled,button.secondary.stage-action.status-late:disabled{opacity:.8}
+.item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}dialog{border:1px solid #ccd2d9;border-radius:13px;padding:18px;width:min(640px,calc(100% - 20px));max-height:88vh}dialog::backdrop{background:#1018279c}.foot{font-size:12px;color:#667282;margin:28px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:9px}.card{padding:12px}h1{font-size:19px}.cutrow{grid-template-columns:1fr 110px}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
 <header><div class="top"><div><h1>ZZIPING 2.0 • Controle da Produção</h1><small>Módulo 3 — Corte, envios parciais e devoluções</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
 <main class="shell"><p class="warn">Ambiente exclusivo da ZZIPING 2.0. <b>Liberar para produção</b> modifica o status deste pedido somente no banco de testes. Não gera pagamentos nem altera a ZZIPING 1.0.</p>
@@ -107,6 +117,28 @@ async function load(keep=true){
   if(!keep)message('Produção atualizada.');
  }catch(e){message('Não foi possível carregar: '+e.message,true)}
 }
+function stageStatus(stage,sizes){
+ const related=movimentos.filter(m=>m.processo_id===stage.id);
+ const sent=related.reduce((n,m)=>n+m.quantidade_enviada,0);
+ const receivedQty=related.reduce((n,m)=>n+received(m.id),0);
+ const approvedQty=related.reduce((n,m)=>n+approved(m.id),0);
+ const pending=sent-receivedQty;
+ const late=related.some(m=>m.quantidade_enviada>received(m.id)&&m.prazo_previsto&&m.prazo_previsto<today());
+ const availableQty=sizes.reduce((n,t)=>n+available(t.id,stage.id),0);
+ const prev=etapas.find(x=>x.produto_id===stage.produto_id&&x.ordem===stage.ordem-1);
+ const previousFinished=stage.ordem===2?
+   sizes.length>0&&sizes.every(t=>!!cortes.find(c=>c.produto_tamanho_id===t.id)):
+   !!prev&&stageStatus(prev,sizes).id==='done';
+ const expected=sizes.reduce((n,t)=>n+(stage.ordem===2?
+  (cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0):
+  approvedTotal(t.id,prev?.id)),0);
+ const hasReject=receivedQty>approvedQty;
+ const done=sent>0&&previousFinished&&availableQty===0&&pending===0&&!hasReject&&approvedQty===expected;
+ if(late)return {id:'late',name:'Atrasado',availableQty,sent,receivedQty,pending};
+ if(done)return {id:'done',name:'Concluído',availableQty,sent,receivedQty,pending};
+ if(sent>0)return {id:'progress',name:'Em andamento',availableQty,sent,receivedQty,pending};
+ return {id:'idle',name:'Não iniciado',availableQty,sent,receivedQty,pending};
+}
 function render(){
  const p=pedidos.find(x=>x.id===$('order').value);
  $('ordermeta').innerHTML=p?'<div class="line"><b>Pedido:</b> '+esc(p.numero_externo)+' · '+esc(p.prioridade)+' · Entrega '+esc(p.prazo_entrega)+' · <b>'+esc(p.status)+'</b></div>':'<p class="muted">Nenhum pedido encontrado.</p>';
@@ -120,10 +152,19 @@ function render(){
   const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
   const cutBtn=canEdit&&p.status==='em_producao'&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
   const stagesHtml=steps.filter(s=>s.ordem>1).map(s=>{
-   const availability=sz.reduce((n,t)=>n+available(t.id,s.id),0);
-   const sent=sz.reduce((n,t)=>n+processTotal(t.id,s.id),0);
-   const returned=movimentos.filter(m=>m.processo_id===s.id).reduce((n,m)=>n+received(m.id),0);
-   return '<div class="row"><div class="top"><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+(canEdit&&p.status==='em_producao'?'<button class="secondary" data-send="'+esc(s.id)+'">Enviar peças</button>':'')+'</div><div class="muted">Disponíveis: '+availability+' · Enviadas: '+sent+' · Devolvidas: '+returned+' · '+esc(s.origem)+'</div></div>';
+   const state=stageStatus(s,sz);
+   const action=state.id==='done'?'Concluído':state.id==='late'?'Atrasado':state.id==='progress'?'Em andamento':'Enviar peças';
+   const canSend=canEdit&&p.status==='em_producao'&&state.availableQty>0;
+   const tooltip=state.id==='done'?'Etapa concluída':canSend?'Clique para enviar mais peças desta etapa':
+     state.id==='late'?'Há peças pendentes de devolução fora do prazo':
+     state.id==='progress'?'Aguardando devolução ou aprovação das peças enviadas':'Aguardando peças da etapa anterior';
+   const button=canEdit&&p.status==='em_producao'?
+    '<button type="button" class="secondary stage-action status-'+state.id+'"'+
+      (canSend?' data-send="'+esc(s.id)+'"':' disabled')+' title="'+esc(tooltip)+'">'+action+'</button>':'';
+   const chip='<span class="status-chip status-'+state.id+'">'+state.name+'</span>';
+   return '<div class="row stage-row status-'+state.id+'"><div class="top"><div><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+chip+'</div>'+button+'</div>'+
+     '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
+     ' · Devolvidas: '+state.receivedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div></div>';
   }).join('');
   return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+'</div><div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
  }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
