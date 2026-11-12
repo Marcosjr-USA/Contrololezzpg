@@ -60,6 +60,9 @@ dialog::backdrop{background:#111a27a8}.foot{color:#66707a;font-size:12px;margin:
 <p class="muted">Os prazos de cada processo são apenas planejados; os movimentos e a conferência serão implementados depois.</p>
 <div class="actions"><button type="submit" id="saveproduct">Salvar produto + grade + processos</button><button type="button" class="secondary" id="cancelproduct">Cancelar</button></div></form>
 </dialog>
+<dialog id="processdialog"><div class="top"><h2 id="processtitle">Editar processos</h2><button type="button" class="secondary" id="closeprocess">Fechar</button></div>
+<p class="muted">Corte é sempre a primeira etapa, interna. As etapas antigas serão substituídas apenas quando você salvar.</p>
+<form id="processform"><div id="editsteps"></div><button class="secondary" type="button" id="addeditstep">+ Adicionar processo</button><div class="actions" style="margin-top:16px"><button type="submit" id="saveprocess">Salvar sequência</button><button type="button" class="secondary" id="cancelprocess">Cancelar</button></div></form></dialog>
 <div class="foot">ZZIPING 2.0 · Módulo 2 · Rascunhos e estrutura de processos · Nenhum dado da 1.0 migrado</div>
 </main>
 <script>
@@ -71,7 +74,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const moneyDate=d=>d?d.split('-').reverse().join('/'):'—';
 const dateNow=()=>{const d=new Date(),local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
 let db=null,session=null,me=null,perms=null,selected=null,write=false;
-let clients=[],types=[],orders=[],products=[],sizes=[],stages=[];
+let clients=[],types=[],orders=[],products=[],sizes=[],stages=[],editingProcessProduct=null;
 function msg(t,isError=false){$('notice').textContent=t||'';$('notice').className=isError?'error':'good'}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function guard(error){msg(error?.message||String(error),true)}
@@ -127,7 +130,7 @@ async function openOrder(id,scroll=true){
  $('productlist').innerHTML=items.map(p=>{
   const grade=sizes.filter(s=>s.produto_id===p.id);
   const steps=stages.filter(s=>s.produto_id===p.id).sort((a,b)=>a.ordem-b.ordem);
-  return '<div class="item"><div class="top"><strong>'+esc(p.descricao)+'</strong><span class="pill">'+p.quantidade_vendida+' peças vendidas</span></div><small class="muted">Grade: '+esc(p.grade_tipo)+'</small><p><b>Tamanhos:</b> '+grade.map(g=>esc(g.tamanho)+' ('+g.quantidade_vendida+')').join(' · ')+'</p><p><b>Processos:</b> '+steps.map(x=>x.ordem+'. '+esc(x.nome)+(x.prazo_dias_uteis===null?'':' ('+x.prazo_dias_uteis+' dias úteis)')).join(' → ')+'</p>'+ (p.observacoes?'<p class="muted">'+esc(p.observacoes)+'</p>':'')+'</div>'
+  return '<div class="item"><div class="top"><strong>'+esc(p.descricao)+'</strong><span class="pill">'+p.quantidade_vendida+' peças vendidas</span></div><small class="muted">Grade: '+esc(p.grade_tipo)+'</small><p><b>Tamanhos:</b> '+grade.map(g=>esc(g.tamanho)+' ('+g.quantidade_vendida+')').join(' · ')+'</p><p><b>Processos:</b> '+steps.map(x=>x.ordem+'. '+esc(x.nome)+(x.prazo_dias_uteis===null?'':' ('+x.prazo_dias_uteis+' dias úteis)')).join(' → ')+'</p>'+ (p.observacoes?'<p class="muted">'+esc(p.observacoes)+'</p>':'')+(write?'<div class="actions"><button class="secondary" type="button" data-editprocess="'+esc(p.id)+'">Editar processos</button></div>':'')+'</div>'
  }).join('')||'<p class="muted">Ainda não há produtos. Use “Adicionar produto” para criar grades e processos.</p>';
  if(scroll)$('detail').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -147,16 +150,40 @@ function updateTotal(){
  const total=[...$('grades').querySelectorAll('.qty')].reduce((n,input)=>n+(Number(input.value)||0),0);
  $('gradetotal').textContent='Total vendido: '+total;
 }
+const standardNames=['Costura','Bordado Externo','Silk','Sublimação Interna','Sublimação Externa','Bordado Interno','Lavanderia','Casear e Pregar Botão (Acabamento)'];
 function typeOptions(){
- return '<option value="">Selecione um tipo</option>'+types.filter(x=>x.ativo&&x.nome.trim().toLowerCase()!=='corte').map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
+ return '<option value="">Selecione um processo</option>'+standardNames.map(nome=>{
+  const t=types.find(x=>x.ativo&&x.nome.toLowerCase()===nome.toLowerCase());
+  return t?'<option value="'+esc(t.id)+'">'+esc(t.nome)+'</option>':'';
+ }).join('');
 }
-function stepLine(){
+function expectedOrigin(nome){
+ const n=(nome||'').toLowerCase();
+ if(n.includes('interno')||n.includes('interna'))return 'interno';
+ if(n.includes('externo')||n.includes('externa'))return 'facção';
+ return 'facção';
+}
+function stepLine(container='steps',existing=null){
  const row=document.createElement('div');row.className='step-line';
- row.innerHTML='<span class="step-num"></span><select class="step-type" required>'+typeOptions()+'</select><select class="step-origin"><option value="a_definir">A definir</option><option value="facção">Facção</option><option value="interno">Interno</option></select><input class="prazo" type="number" min="0" max="9999" placeholder="Dias úteis" aria-label="Prazo em dias úteis"><button class="secondary remover" type="button">×</button>';
- row.querySelector('.remover').onclick=()=>{row.remove();numberSteps()};
- $('steps').append(row);numberSteps();
+ row.innerHTML='<span class="step-num"></span><select class="step-type" required>'+typeOptions()+'</select><select class="step-origin"><option value="facção">Facção / Externo</option><option value="interno">Interno</option><option value="a_definir">A definir</option></select><input class="prazo" type="number" min="0" max="9999" placeholder="Dias úteis" aria-label="Prazo em dias úteis"><button class="secondary remover" type="button">×</button>';
+ const select=row.querySelector('.step-type'),origem=row.querySelector('.step-origin');
+ select.onchange=()=>{
+  const t=types.find(x=>x.id===select.value);if(!t)return;
+  const origemFixa=/interno|interna|externo|externa/i.test(t.nome);
+  origem.value=expectedOrigin(t.nome);origem.disabled=origemFixa;
+ };
+ if(existing){
+  const t=types.find(x=>x.ativo&&x.nome.toLowerCase()===existing.nome.toLowerCase());
+  if(t){
+   select.value=t.id;select.dispatchEvent(new Event('change'));
+   if(!origem.disabled)origem.value=existing.origem;
+  }else{select.value='';origem.value='a_definir'}
+  row.querySelector('.prazo').value=existing.prazo_dias_uteis??'';
+ }
+ row.querySelector('.remover').onclick=()=>{row.remove();numberSteps(container)};
+ $(container).append(row);numberSteps(container);
 }
-function numberSteps(){[...$('steps').children].forEach((e,i)=>e.querySelector('.step-num').textContent=i+2)}
+function numberSteps(container='steps'){[...$(container).children].forEach((e,i)=>e.querySelector('.step-num').textContent=i+2)}
 function clearProduct(){
  $('productform').reset();$('grades').innerHTML='';$('steps').innerHTML='';
  for(const size of ['P','M','G'])gradeLine(size,'');
@@ -168,13 +195,14 @@ function collectGrades(){
  if(new Set(arr.map(a=>a.tamanho.toLowerCase())).size!==arr.length)throw Error('Existem tamanhos repetidos na grade');
  return arr;
 }
-function collectSteps(){
- return [...$('steps').children].map(row=>{
-  const id=row.querySelector('.step-type').value,selectedType=types.find(x=>x.id===id);
-  if(!selectedType)throw Error('Selecione um tipo de serviço para cada processo');
-  const value=row.querySelector('.prazo').value;
-  if(value!==''&&(!/^\d+$/.test(value)||Number(value)>9999))throw Error('Prazo em dias úteis inválido');
-  return {nome:selectedType.nome,tipo_servico_id:selectedType.id,origem:row.querySelector('.step-origin').value,prazo_dias_uteis:value===''?null:Number(value)};
+function collectSteps(container='steps'){
+ return [...$(container).children].map(row=>{
+  const id=row.querySelector('.step-type').value,t=types.find(x=>x.id===id);
+  if(!t||!standardNames.some(n=>n.toLowerCase()===t.nome.toLowerCase()))throw Error('Selecione uma das operações padronizadas em cada etapa');
+  const value=row.querySelector('.prazo').value,origin=row.querySelector('.step-origin').value;
+  if(value!==''&&(!/^[0-9]+$/.test(value)||Number(value)>9999))throw Error('Prazo em dias úteis inválido');
+  if(/interno|interna|externo|externa/i.test(t.nome)&&origin!==expectedOrigin(t.nome))throw Error('Origem incompatível com '+t.nome);
+  return {nome:t.nome,tipo_servico_id:t.id,origem:origin,prazo_dias_uteis:value===''?null:Number(value)};
  });
 }
 function busy(button,on,text){button.disabled=on;button.textContent=on?'Salvando...':text}
@@ -184,9 +212,37 @@ $('newproduct').onclick=()=>{clearProduct();$('productdialog').showModal()};
 $('closeproduct').onclick=$('cancelproduct').onclick=()=>$('productdialog').close();
 $('closedetail').onclick=()=>{selected=null;show('detail',false)};
 $('addgrade').onclick=()=>gradeLine();
-$('addstep').onclick=()=>{if(!types.some(t=>t.ativo&&t.nome.toLowerCase()!=='corte'))return msg('Cadastre um tipo de serviço no Módulo 1 antes de adicioná-lo ao produto.',true);stepLine()};
+$('addstep').onclick=()=>stepLine();
 $('search').oninput=render;
 $('orders').onclick=e=>{const button=e.target.closest('[data-open]');if(button)openOrder(button.dataset.open)};
+$('productlist').onclick=e=>{
+ const b=e.target.closest('[data-editprocess]');if(b)openProcessEditor(b.dataset.editprocess);
+};
+function openProcessEditor(id){
+ if(!write)return;
+ const p=products.find(x=>x.id===id);if(!p)return;
+ editingProcessProduct=id;
+ $('processtitle').textContent='Editar processos · '+p.descricao;
+ $('editsteps').innerHTML='';
+ for(const item of stages.filter(x=>x.produto_id===id&&x.ordem>1).sort((a,b)=>a.ordem-b.ordem)){
+  stepLine('editsteps',item);
+ }
+ $('processdialog').showModal();
+}
+$('closeprocess').onclick=$('cancelprocess').onclick=()=>{$('processdialog').close();editingProcessProduct=null};
+$('addeditstep').onclick=()=>stepLine('editsteps');
+$('processform').onsubmit=async e=>{
+ e.preventDefault();if(!write||!editingProcessProduct)return;
+ const btn=$('saveprocess');busy(btn,true);
+ try{
+  const processos=collectSteps('editsteps');
+  const {error}=await db.rpc('zz2_atualizar_processos',{p_produto_id:editingProcessProduct,p_processos:processos});
+  if(error)throw error;
+  $('processdialog').close();editingProcessProduct=null;
+  await load(true);msg('Sequência de processos atualizada. Corte continua primeiro.');
+ }catch(err){guard(err)}finally{busy(btn,false,'Salvar sequência')}
+};
+
 $('orderform').onsubmit=async e=>{
  e.preventDefault();if(!write)return;
  const f=e.currentTarget,btn=$('saveorder');busy(btn,true);
