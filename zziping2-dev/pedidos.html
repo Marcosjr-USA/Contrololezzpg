@@ -121,7 +121,7 @@ function render(){
  }).join('')||'<p class="muted">Nenhum pedido encontrado. Cadastre um novo pedido para começar.</p>';
 }
 function clientName(o){return clients.find(c=>c.id===o.cliente_id)?.nome||''}
-function meta(o){return '<dl><dt>Número externo</dt><dd>'+esc(o.numero_externo)+'</dd><dt>Cliente</dt><dd>'+esc(clientName(o)||o.cliente_nome_livre||'—')+'</dd><dt>Prioridade</dt><dd>'+esc(o.prioridade)+'</dd><dt>Entrega</dt><dd>'+moneyDate(o.prazo_entrega)+'</dd><dt>Status</dt><dd>Rascunho — ainda sem lançamento de produção</dd><dt>Observações</dt><dd>'+esc(o.observacoes||'—')+'</dd></dl>'}
+function meta(o){return '<dl><dt>Número externo</dt><dd>'+esc(o.numero_externo)+'</dd><dt>Cliente</dt><dd>'+esc(clientName(o)||o.cliente_nome_livre||'—')+'</dd><dt>Prioridade</dt><dd>'+esc(o.prioridade)+'</dd><dt>Entrega</dt><dd>'+moneyDate(o.prazo_entrega)+'</dd><dt>Status</dt><dd>'+esc(o.status==='pronto'?'Pronto — conferência final aprovada':o.status==='em_producao'?'Em produção':'Rascunho — ainda sem lançamento de produção')+'</dd><dt>Observações</dt><dd>'+esc(o.observacoes||'—')+'</dd></dl>'}
 async function openOrder(id,scroll=true){
  const o=orders.find(v=>v.id===id);if(!o){selected=null;show('detail',false);return}
  selected=id;show('detail',true);$('detailtitle').textContent='Pedido '+o.numero_externo;
