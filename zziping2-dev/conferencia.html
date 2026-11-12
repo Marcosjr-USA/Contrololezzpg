@@ -15,9 +15,12 @@
 <div class="card"><h2>Produtos por tamanho</h2><div id="products"></div></div>
 <div class="card"><h2>Histórico de conferências</h2><div id="history"></div></div></section>
 <dialog id="checkdialog"><div class="top"><h2 id="checktitle">Conferir produto</h2><button class="secondary" type="button" id="closecheck">Fechar</button></div>
-<p class="muted">O padrão aprova as peças vendidas ainda pendentes, desde que já tenham retornado aprovadas do último processo. Se houver defeito ou peça de reserva usada, altere as quantidades antes de salvar.</p>
-<form id="checkform"><div id="checkrows"></div><label>Observações sobre conferência/defeitos<input name="observacoes" maxlength="500" placeholder="Ex.: defeito detectado, reposição com reserva"></label>
-<div class="actions"><button id="savecheck" type="submit">Registrar conferência</button><button id="cancelcheck" type="button" class="secondary">Cancelar</button></div></form></dialog>
+<p class="muted">As quantidades são preenchidas automaticamente conforme as peças que já retornaram aprovadas da última etapa. Você só precisa confirmar que as peças estão boas.</p>
+<form id="checkform"><div id="checksummary" class="note"></div>
+<details id="checkdetails"><summary><b>Ajustar por tamanho (defeitos, reservas ou aprovação parcial)</b></summary>
+<p class="muted">Abra esta seção somente se encontrou peças com defeito ou precisa ajustar o resultado. Caso contrário, mantenha os valores automáticos.</p><div id="checkrows"></div>
+<label>Observações sobre conferência/defeitos<input name="observacoes" maxlength="500" placeholder="Ex.: peça com defeito, reserva utilizada"></label></details>
+<div class="actions" style="margin-top:15px"><button id="savecheck" type="submit">Aprovar peças disponíveis</button><button id="cancelcheck" type="button" class="secondary">Cancelar</button></div></form></dialog>
 <p class="foot">ZZIPING 2.0 — Desenvolvimento isolado da versão 1.0. Registros de conferência não podem ser apagados pelo painel. Reprocessamento de defeitos será desenvolvido em etapa própria.</p>
 </main><script>
 'use strict';
@@ -104,7 +107,9 @@ function render(){
   }).join('');
   return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+'</h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
    '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+'</p>'+list+
-   (canWrite&&order?.status==='em_producao'&&sum<soldP?'<button type="button" class="secondary" data-check="'+esc(p.id)+'">Conferir produto</button>':'')+'</div>';
+   (canWrite&&order?.status==='em_producao'&&sum<soldP?
+     '<button type="button" class="secondary" data-check="'+esc(p.id)+'">'+
+     (ss.some(t=>totals(t.id).available>0)?'Aprovar peças disponíveis':'Aguardando retorno da última etapa')+'</button>':'')+'</div>';
  }).join('')||'<p class="muted">Sem produtos cadastrados.</p>';
  const ids=new Set(tamanhos.filter(t=>ps.some(p=>p.id===t.produto_id)).map(t=>t.id));
  $('history').innerHTML=conferencias.filter(c=>ids.has(c.produto_tamanho_id)).sort((a,b)=>b.conferido_em.localeCompare(a.conferido_em)).map(c=>{
@@ -117,25 +122,45 @@ function render(){
 function openCheck(id){
  const p=produtos.find(x=>x.id===id);if(!p)return;selectedProduct=id;
  $('checktitle').textContent='Conferir · '+p.descricao;
- $('checkform').reset();
+ $('checkform').reset();$('checkdetails').open=false;
+ let recommendedTotal=0,pendingTotal=0,readyTotal=0;
  $('checkrows').innerHTML=tamanhos.filter(t=>t.produto_id===id).map(t=>{
   const st=totals(t.id),pending=Math.max(0,t.quantidade_vendida-st.accepted);
   const recommended=Math.min(pending,st.available);
   const reserveFree=Math.max(0,cutReserve(t.id)-st.reserve);
+  pendingTotal+=pending;recommendedTotal+=recommended;readyTotal+=st.available;
   return '<div class="grade-row" data-size="'+esc(t.id)+'"><strong>Tamanho '+esc(t.tamanho)+'</strong>'+
-   '<p class="muted">Vendidas: '+t.quantidade_vendida+' · Faltam aprovar: '+pending+' · Disponíveis após última etapa: '+st.available+
-   ' · Reserva cortada ainda não usada: '+reserveFree+'</p><div class="grade-inputs">'+
+   '<p class="muted">Vendidas: '+t.quantidade_vendida+' · Faltam aprovar: '+pending+' · Peças disponíveis: '+st.available+
+   ' · Reservas ainda não usadas: '+reserveFree+'</p><div class="grade-inputs">'+
    '<label>Aprovar<input class="goodqty" type="number" min="0" max="'+Math.min(pending,st.available)+'" value="'+recommended+'" required></label>'+
    '<label>Defeituosas<input class="badqty" type="number" min="0" max="'+st.available+'" value="0" required></label>'+
    '<label>Reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="0" required></label>'+
    '</div></div>';
  }).join('');
+ const missing=Math.max(0,pendingTotal-recommendedTotal);
+ $('checksummary').innerHTML=recommendedTotal>0?
+  '<strong>Prontas para conferência: '+recommendedTotal+' peça(s)</strong><p class="muted">Preenchimento automático com base nas devoluções aprovadas da última etapa. '+(missing>0?'Ainda faltarão '+missing+' peça(s) deste produto para completar o pedido.':'Todas as peças vendidas deste produto poderão ficar aprovadas.')+'</p>':
+  '<strong>Nenhuma peça disponível para conferência.</strong><p class="muted">As peças ainda precisam retornar aprovadas do último processo de produção. Você não precisa preencher nada agora.</p>';
+ $('savecheck').disabled=recommendedTotal===0;
+ $('savecheck').textContent='Confirmar '+recommendedTotal+' peça(s) aprovadas';
  $('checkrows').querySelectorAll('[data-size]').forEach(row=>{
   const good=row.querySelector('.goodqty'),bad=row.querySelector('.badqty'),reserve=row.querySelector('.reserveqty');
-  good.oninput=()=>{const t=tamanhos.find(x=>x.id===row.dataset.size),st=totals(t.id);reserve.max=String(Math.min(Math.max(0,cutReserve(t.id)-st.reserve),Number(good.value)||0));if(Number(reserve.value)>Number(reserve.max))reserve.value=reserve.max};
-  bad.oninput=()=>{};
+  good.oninput=()=>{
+   const t=tamanhos.find(x=>x.id===row.dataset.size),st=totals(t.id);
+   reserve.max=String(Math.min(Math.max(0,cutReserve(t.id)-st.reserve),Number(good.value)||0));
+   if(Number(reserve.value)>Number(reserve.max))reserve.value=reserve.max;
+   updateCheckButton();
+  };
+  bad.oninput=updateCheckButton;reserve.oninput=updateCheckButton;
  });
  $('checkdialog').showModal();
+}
+function updateCheckButton(){
+ const rows=[...$('checkrows').querySelectorAll('[data-size]')];
+ const quantity=rows.reduce((n,row)=>n+(Number(row.querySelector('.goodqty').value)||0),0);
+ const defects=rows.reduce((n,row)=>n+(Number(row.querySelector('.badqty').value)||0),0);
+ $('savecheck').disabled=quantity+defects===0;
+ $('savecheck').textContent=defects>0?'Registrar conferência e defeitos':'Confirmar '+quantity+' peça(s) aprovadas';
 }
 $('order').onchange=render;
 $('reload').onclick=()=>load(true);
@@ -161,7 +186,7 @@ $('checkform').onsubmit=async e=>{
   const {data,error}=await db.rpc('zz2_registrar_conferencia_lote',{p_produto_id:selectedProduct,p_itens:itens,p_observacoes:form.elements.observacoes.value.trim()||null});
   if(error)throw error;
   $('checkdialog').close();await load();note('Conferência registrada: '+data+' peça(s) aprovada(s).');
- }catch(err){note(err.message,true)}finally{btn.disabled=false;btn.textContent='Registrar conferência'}
+ }catch(err){note(err.message,true);$('checkdetails').open=true;}finally{btn.disabled=false;btn.textContent='Aprovar peças disponíveis'}
 };
 $('finish').onclick=async()=>{
  const order=pedidos.find(p=>p.id===$('order').value);if(!order)return;
