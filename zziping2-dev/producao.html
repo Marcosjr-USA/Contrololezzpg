@@ -243,8 +243,8 @@ function render(){
      'Não há peças disponíveis para envio neste momento.';
    const button=canEdit&&p.status==='em_producao'&&!isPaused?
     '<button type="button" class="secondary stage-action status-'+state.id+'"'+
-      (canSend?' data-send="'+esc(s.id)+'"':' data-blocked="'+esc(s.id)+'"')+
-      ' title="'+esc(canSend?'Clique para enviar peças disponíveis':reason)+'">'+action+'</button>':'';
+      (canSend?' data-send="'+esc(s.id)+'"':state.id==='awaiting'?' data-openreplacement="'+esc(prod.id)+'"':' data-blocked="'+esc(s.id)+'"')+
+      ' title="'+esc(canSend?'Clique para enviar peças disponíveis':state.id==='awaiting'?'Clique para abrir as reposições pendentes':reason)+'">'+action+'</button>':'';
    const returnButton=canEdit&&p.status==='em_producao'&&state.pending>0?
      '<button type="button" class="return-action" data-returnprocess="'+esc(s.id)+'">Registrar devolução ('+state.pending+')</button>':'';
    const chip='<span class="status-chip status-'+state.id+'">'+state.name+'</span>';
@@ -256,7 +256,7 @@ function render(){
   }).join('');
   return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+' · Novos cortes de reposição: '+extraCuts+
   ' · Rejeitadas nos processos: '+rejected+' · Reposições pendentes: '+pendingReplacement+'</div>'+
-  (replacementRows.length?'<details><summary>Ver reposições ('+replacementRows.length+')</summary>'+replacementHistory+'</details>':'')+
+  (replacementRows.length?'<details data-replacement-details="'+esc(prod.id)+'"><summary>Ver reposições ('+replacementRows.length+')</summary>'+replacementHistory+'</details>':'')+
   (rejected?'<details><summary style="cursor:pointer">Ver defeitos registrados ('+rejectedRows.length+')</summary>'+rejectionHistory+'</details>':'')+
   '<div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+replacementButton+'</div>'+stagesHtml+'</div>';
  }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
@@ -341,10 +341,11 @@ $('release').onclick=async()=>{
  try{const {error}=await db.rpc('zz2_liberar_pedido',{p_pedido_id:id});if(error)throw error;await load();message('Pedido liberado para produção. O cortador pode concluir o corte.')}catch(e){message(e.message,true)}finally{busy(btn,false,'Liberar pedido para corte')}
 };
 $('products').onclick=e=>{
- const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess],[data-replacement],[data-cutreplacement]');
+ const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess],[data-replacement],[data-cutreplacement],[data-openreplacement]');
  if(b?.dataset.cut)openCut(b.dataset.cut);
  if(b?.dataset.send)openSend(b.dataset.send);
  if(b?.dataset.replacement)openReplacement(b.dataset.replacement);
+ if(b?.dataset.openreplacement)openPendingReplacement(b.dataset.openreplacement);
  if(b?.dataset.cutreplacement)concludeReplacementCut(b.dataset.cutreplacement);
  if(b?.dataset.returnprocess)openReturnProcess(b.dataset.returnprocess);
  if(b?.dataset.blocked){
@@ -371,6 +372,23 @@ function transferCandidates(productId){
   const ta=grades.find(x=>x.id===a.produto_tamanho_id)?.tamanho||'',tb=grades.find(x=>x.id===b.produto_tamanho_id)?.tamanho||'';
   return ta.localeCompare(tb,'pt-BR',{numeric:true})||a.enviado_em.localeCompare(b.enviado_em);
  });
+}
+function openPendingReplacement(productId){
+ const detail=[...$('products').querySelectorAll('[data-replacement-details]')]
+   .find(el=>el.dataset.replacementDetails===productId);
+ if(detail){
+  detail.open=true;
+  detail.scrollIntoView({behavior:'smooth',block:'center'});
+  const pending=[...detail.querySelectorAll('[data-cutreplacement]')];
+  if(pending.length){
+   message('Abra a reposição abaixo e clique em Concluir corte da reposição quando as peças tiverem sido cortadas. Em seguida, envie as peças para a primeira etapa e registre os retornos normalmente.');
+  }else{
+   message('As reposições já têm corte confirmado. Envie as peças disponíveis para a primeira etapa da produção ou aguarde a devolução das etapas seguintes.');
+  }
+  return;
+ }
+ const product=findProduct(productId);
+ message('Nenhuma reposição registrada para '+(product?.descricao||'este produto')+'. Registre o defeito e solicite a reposição.',true);
 }
 async function concludeReplacementCut(id){
  const rep=reposicoes.find(x=>x.id===id);
