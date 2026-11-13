@@ -56,7 +56,7 @@ async function load(){
  try{
   [orders,products,sizes,steps,moves,returns,faccoes,checks,clients]=await Promise.all(['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','faccoes','conferencias_finais','clientes'].map(query));
   $('faccao').innerHTML='<option value="">Todas as facções</option><option value="internal">Operação interna</option>'+faccoes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
-  $('pedido').innerHTML='<option value="">Todos os pedidos</option>'+orders.slice().sort((a,b)=>b.criado_em.localeCompare(a.criado_em)).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.numero_externo)+'</option>').join('');
+  $('pedido').innerHTML='<option value="">Todos os pedidos</option>'+orders.slice().sort((a,b)=>b.criado_em.localeCompare(a.criado_em)).map(o=>'<option value="'+esc(o.id)+'">'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.numero_externo)+'</option>').join('');
   $('faccao').value=[...$('faccao').options].some(x=>x.value===fac)?fac:'';
   $('pedido').value=[...$('pedido').options].some(x=>x.value===ped)?ped:'';
   note('Dados atualizados.');render();
@@ -85,7 +85,7 @@ function render(){
   if(!groups.has(key))groups.set(key,{fac:nameFac(r.m.faccao_id),service:r.step.nome,sent:0,received:0,approved:0,pending:0,late:0});
   const g=groups.get(key);g.sent+=num(r.m.quantidade_enviada);g.received+=r.received;g.approved+=r.approved;g.pending+=r.pending;g.late+=r.late?r.pending:0;}
  $('byfaccao').innerHTML=[...groups.values()].sort((a,b)=>a.fac.localeCompare(b.fac)||a.service.localeCompare(b.service)).map(g=>'<tr><td>'+esc(g.fac)+'</td><td>'+esc(g.service)+'</td><td>'+g.sent+'</td><td>'+g.received+'</td><td>'+g.approved+'</td><td>'+g.pending+'</td><td>'+g.late+'</td></tr>').join('')||'<tr><td colspan="7">Não há envios nos filtros selecionados.</td></tr>';
- $('movements').innerHTML=m.map(r=>'<tr><td><b>'+esc(r.order.numero_externo)+'</b><br>'+esc(r.product.descricao)+'</td><td>'+esc(r.size.tamanho)+'</td><td>'+esc(r.step.nome)+'<br><span class="muted">'+esc(nameFac(r.m.faccao_id))+'</span></td><td>'+dateBR(r.m.enviado_em)+'</td><td>'+dateBR(r.m.prazo_previsto)+'</td><td>'+r.m.quantidade_enviada+'</td><td>'+r.received+'</td><td>'+r.approved+'</td><td>'+r.pending+'</td><td><span class="pill '+(r.late?'late':r.pending===0?'done':'progress')+'">'+(r.late?'Atrasado':r.pending===0?'Recebido':'Aguardando')+'</span></td></tr>').join('')||'<tr><td colspan="10">Nenhum envio para mostrar.</td></tr>';
+ $('movements').innerHTML=m.map(r=>'<tr><td><b>'+esc(clients.find(c=>c.id===r.order.cliente_id)?.nome||r.order.cliente_nome_livre||'Cliente não informado')+' · '+esc(r.order.numero_externo)+'</b><br>'+esc(r.product.descricao)+'</td><td>'+esc(r.size.tamanho)+'</td><td>'+esc(r.step.nome)+'<br><span class="muted">'+esc(nameFac(r.m.faccao_id))+'</span></td><td>'+dateBR(r.m.enviado_em)+'</td><td>'+dateBR(r.m.prazo_previsto)+'</td><td>'+r.m.quantidade_enviada+'</td><td>'+r.received+'</td><td>'+r.approved+'</td><td>'+r.pending+'</td><td><span class="pill '+(r.late?'late':r.pending===0?'done':'progress')+'">'+(r.late?'Atrasado':r.pending===0?'Recebido':'Aguardando')+'</span></td></tr>').join('')||'<tr><td colspan="10">Nenhum envio para mostrar.</td></tr>';
  const orderIds=new Set(m.map(r=>r.order.id));
  // Sem filtro de movimentos, mostrar todos os pedidos; com filtro de facção/período, listar apenas pedidos com envios correspondentes.
  const filtered=!!($('faccao').value||$('inicio').value||$('fim').value||$('onlypending').checked);
@@ -95,7 +95,7 @@ function render(){
   const pp=products.filter(p=>p.pedido_id===o.id),ids=new Set(pp.map(p=>p.id)),ss=sizes.filter(t=>ids.has(t.produto_id));
   const sold=sum(ss,'quantidade_vendida'),conf=sum(checks.filter(c=>ss.some(t=>t.id===c.produto_tamanho_id)),'quantidade_aprovada');
   const lateOrder=o.status!=='pronto'&&o.prazo_entrega&&o.prazo_entrega<today();
-  return '<tr><td>'+esc(o.numero_externo)+'</td><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'—')+'</td><td><span class="pill '+(o.status==='pronto'?'done':o.pausado_em?'progress':lateOrder?'late':'waiting')+'">'+esc(o.pausado_em?'PAUSADO':o.status)+(lateOrder?' · prazo vencido':'')+'</span></td><td>'+dateBR(o.prazo_entrega)+'</td><td>'+sold+'</td><td>'+conf+'</td><td>'+Math.max(0,sold-conf)+'</td></tr>';
+  return '<tr><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.numero_externo)+'</td><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'—')+'</td><td><span class="pill '+(o.status==='pronto'?'done':o.pausado_em?'progress':lateOrder?'late':'waiting')+'">'+esc(o.pausado_em?'PAUSADO':o.status)+(lateOrder?' · prazo vencido':'')+'</span></td><td>'+dateBR(o.prazo_entrega)+'</td><td>'+sold+'</td><td>'+conf+'</td><td>'+Math.max(0,sold-conf)+'</td></tr>';
  }).join('')||'<tr><td colspan="7">Nenhum pedido nos filtros.</td></tr>';
 }
 function toCSV(){
