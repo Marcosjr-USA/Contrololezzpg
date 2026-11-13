@@ -120,7 +120,7 @@ $('newprice').onclick=()=>{
  if(!$('price_type').options.length){
   $('price_type').innerHTML=tipos.filter(t=>t.ativo).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.nome)+'</option>').join('');
  }
- $('priceform').reset();$('pricedialog').showModal();
+ $('priceform').reset();$('price_type').dispatchEvent(new Event('change'));$('pricedialog').showModal();
 };
 $('price_type').onchange=()=>{
  const p=precos.find(x=>x.faccao_id===$('faccao').value&&x.tipo_servico_id===$('price_type').value);
