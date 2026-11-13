@@ -1,0 +1,200 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 · Financeiro das Facções</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f5f7;color:#1c2430}*{box-sizing:border-box}body{margin:0}header{background:#181b20;color:white;padding:20px 5%;border-bottom:4px solid #b7192d}header h1{font-size:23px;margin:0}header small{color:#d3d6dc}.shell{max-width:1120px;margin:auto;padding:14px}.card{background:white;border:1px solid #e0e4e8;border-radius:12px;margin:12px 0;padding:19px}.alert{background:#fff2d9;border:1px solid #efc475;border-radius:9px;padding:13px;font-size:14px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button,.button{padding:10px 14px;border:0;border-radius:8px;min-height:42px;background:#b61c30;color:white;font:inherit;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.secondary{background:#e8ebef;color:#24303c}button:disabled{opacity:.5;cursor:not-allowed}input,select,textarea{display:block;width:100%;min-height:42px;padding:10px;border:1px solid #cbd2db;border-radius:8px;background:white;font:inherit;margin:5px 0 12px}label{display:block;font-size:14px;font-weight:600}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.hidden{display:none!important}h2{font-size:20px;margin:4px 0 14px}h3{font-size:17px;margin:6px 0 10px}.muted{font-size:13px;color:#667585}.ok{color:#147848}.error{color:#b72333}.metric{background:#f7f0f2;padding:12px;border-radius:10px;flex:1;min-width:150px}.metric span{display:block;font-size:12px;color:#53606c}.metric strong{font-size:23px}.metrics{display:flex;gap:10px;flex-wrap:wrap;margin:13px 0}.item{padding:14px 0;border-top:1px solid #e9ecf0}.pill{font-size:12px;font-weight:700;background:#fae4e8;color:#951f30;border-radius:20px;padding:6px 9px}.pill.done{background:#ddf4e5;color:#16703d}.foot{color:#6a7582;font-size:12px;padding:18px 0}#notice{white-space:pre-wrap}dialog{width:min(720px,calc(100% - 16px));max-height:90vh;border:1px solid #d2d7df;border-radius:14px;padding:20px}dialog::backdrop{background:#0c172c9c}.preview{background:#eef5f8;border-radius:8px;padding:14px}.tx{font-size:13px;line-height:1.5}.tx strong{font-weight:700}details{border:1px solid #e2e7eb;border-radius:10px;padding:12px;margin:10px 0}summary{cursor:pointer;font-weight:700}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e9ef;text-align:left}th{background:#f5f6f8}@media(max-width:650px){.grid{grid-template-columns:1fr}.shell{padding:8px}.card{padding:13px}h1{font-size:19px}dialog{padding:13px}}
+@media print{header,.buttons,button,.alert,.foot,#notice{display:none!important}.shell{max-width:none}.card{box-shadow:none;border:0;padding:0}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
+<header><div class="top"><div><h1>ZZIPING 2.0 · Financeiro das Facções</h1><small>Módulo 5 — Valores, fechamento, pagamentos e saldos</small></div><span class="pill">DESENVOLVIMENTO</span></div></header>
+<main class="shell"><div class="alert">Controle <b>interno</b> do ambiente ZZIPING 2.0. Registrar pagamento significa anotar uma transferência realizada fora do sistema; <b>não envia dinheiro</b>. Somente peças devolvidas e aprovadas por facção entram no fechamento. A ZZIPING 1.0 não é alterada.</div>
+<div id="notice" role="status" aria-live="polite"></div>
+<div class="card top"><div class="buttons"><a class="button secondary" href="index.html">← Início</a><a class="button secondary" href="producao.html">Produção</a></div><span id="identity" class="muted">Verificando acesso...</span><button id="reload" class="secondary">Atualizar</button></div>
+<section id="blocked" class="card hidden"><h2>Acesso ao financeiro</h2><p id="blockedreason">Faça login com usuário autorizado.</p><a class="button" href="index.html">Abrir login</a></section>
+<section id="work" class="hidden">
+<div class="card"><h2>Facção / prestador</h2><label>Selecione a facção<select id="faccao"></select></label><div class="metrics"><div class="metric"><span>Peças aprovadas sem fechamento</span><strong id="pendingpieces">0</strong></div><div class="metric"><span>Valor pendente já precificado</span><strong id="pendingvalue">R$ 0,00</strong></div><div class="metric"><span>Saldo dos fechamentos</span><strong id="balance">R$ 0,00</strong></div></div><p id="missingprices" class="muted"></p></div>
+<div class="card"><div class="top"><h2>Valores por serviço</h2><button id="newprice">Definir / alterar valor</button></div><p class="muted">Cada facção pode ter um preço diferente por operação. Os valores registrados em fechamentos antigos permanecem preservados.</p><div id="prices"></div></div>
+<div class="card"><div class="top"><h2>Fechamento da produção</h2><button id="newclose">Criar fechamento</button></div>
+<p class="muted">Selecione o período e registre somente as devoluções aprovadas ainda não incluídas em outro fechamento. Você poderá pagar integralmente ou em parcelas.</p>
+<div id="closings"></div></div>
+</section>
+<dialog id="pricedialog"><div class="top"><h2>Valor de serviço</h2><button type="button" class="secondary" data-close="pricedialog">Fechar</button></div>
+<form id="priceform"><label>Operação / serviço<select name="tipo_servico_id" id="price_type" required></select></label><label>Valor por peça (R$)<input name="valor_unitario" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" required placeholder="Ex.: 2,50"></label><div class="buttons"><button id="saveprice">Salvar valor</button></div></form></dialog>
+<dialog id="closedialog"><div class="top"><h2>Criar fechamento</h2><button type="button" class="secondary" data-close="closedialog">Fechar</button></div>
+<form id="closeform"><label>Tipo de período<select name="periodo_tipo"><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="mensal">Mensal</option><option value="personalizado">Personalizado</option></select></label>
+<div class="grid"><label>De<input type="date" name="inicio" required></label><label>Até<input type="date" name="fim" required></label></div>
+<label>Observações (opcional)<textarea name="observacoes" rows="2"></textarea></label><div id="closepreview" class="preview">Escolha o período para ver a prévia.</div><div class="buttons"><button id="saveclose">Confirmar fechamento</button></div></form></dialog>
+<dialog id="paydialog"><div class="top"><h2 id="paytitle">Registrar pagamento</h2><button type="button" class="secondary" data-close="paydialog">Fechar</button></div>
+<p id="payinfo" class="preview"></p><form id="payform">
+<div class="grid"><label>Valor pago (R$)<input name="valor" type="number" min="0.01" step="0.01" required></label><label>Data do pagamento<input name="pago_em" type="date" required></label></div>
+<label>Forma de pagamento<select name="meio"><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="transferencia">Transferência bancária</option><option value="outro">Outro</option></select></label>
+<label>Observações (opcional)<input name="observacoes"></label><div class="buttons"><button id="savepay">Registrar pagamento realizado</button></div></form></dialog>
+<dialog id="receiptdialog"><div class="top"><h2>Extrato do fechamento</h2><button type="button" class="secondary" data-close="receiptdialog">Fechar</button></div><div id="receipt"></div><div class="buttons"><button type="button" id="printreceipt" class="secondary">Imprimir extrato</button></div></dialog>
+<div class="foot">Financeiro interno • valores em reais • operações registradas em auditoria • nenhum dado da ZZIPING 1.0 migrado</div>
+</main>
+<script>
+'use strict';
+const URL_SUPA='https://clgsozqaahxiwunvrkra.supabase.co',KEY_SUPA='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const $=x=>document.getElementById(x),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const displayDate=v=>v?v.split('-').reverse().join('/'):'—';
+const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+let db,user,profile,perms,write=false;let faccoes=[],tipos=[],precos=[],retornos=[],movimentos=[],processos=[],fechamentos=[],itens=[],pagamentos=[];
+let selectedClosing=null;
+function msg(s,error=false){$('notice').textContent=s||'';$('notice').className=error?'error':'ok'}
+function visible(k,on){$(k).classList.toggle('hidden',!on)}
+const activeFac=()=>faccoes.find(x=>x.id===$('faccao').value);
+const byClosing=id=>pagamentos.filter(p=>p.fechamento_id===id);
+const paid=id=>byClosing(id).reduce((n,p)=>n+Number(p.valor),0);
+const closeBalance=f=>Math.max(0,Number(f.valor_bruto)-paid(f.id));
+async function fetchTable(n){const {data,error}=await db.from(n).select('*');if(error)throw error;return data||[]}
+async function init(){
+ try{
+  if(!window.supabase?.createClient)throw Error('Biblioteca de conexão não carregou.');
+  db=window.supabase.createClient(URL_SUPA,KEY_SUPA,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+  const {data:{session},error}=await db.auth.getSession();if(error)throw error;
+  if(!session){visible('blocked',true);return}
+  user=session.user;
+  const [u,p]=await Promise.all([db.from('usuarios').select('*').eq('id',user.id).maybeSingle(),db.from('permissoes_usuario').select('*').eq('usuario_id',user.id).maybeSingle()]);
+  if(u.error||p.error)throw u.error||p.error;profile=u.data;perms=p.data;
+  if(!profile?.ativo||!(profile.papel==='administrador'||perms?.financeiro_visualizar)){
+   visible('blocked',true);$('blockedreason').textContent='Seu usuário não tem permissão de leitura financeira.';return;
+  }
+  write=profile.papel==='administrador'||!!perms?.financeiro_operar;
+  $('identity').textContent=profile.nome+(write?' · Controle autorizado':' · Somente leitura');
+  $('newprice').classList.toggle('hidden',!write);$('newclose').classList.toggle('hidden',!write);
+  visible('work',true);await load();
+ }catch(e){visible('blocked',true);$('blockedreason').textContent='Falha no acesso: '+e.message;msg(e.message,true)}
+}
+async function load(showMessage=false){
+ const selected=$('faccao').value;
+ try{
+  [faccoes,tipos,precos,retornos,movimentos,processos,fechamentos,itens,pagamentos]=await Promise.all(
+   ['faccoes','tipos_servico','valores_faccoes','retornos_producao','movimentacoes_producao','produto_processos','fechamentos_faccoes','fechamento_itens','pagamentos_faccoes'].map(fetchTable));
+  faccoes.sort((a,b)=>a.nome.localeCompare(b.nome));fechamentos.sort((a,b)=>b.numero-a.numero);
+  $('faccao').innerHTML=faccoes.map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
+  $('faccao').value=faccoes.some(f=>f.id===selected)?selected:(faccoes[0]?.id||'');
+  render();
+  if(showMessage)msg('Financeiro atualizado.');
+ }catch(e){msg('Falha ao consultar financeiro: '+e.message,true)}
+}
+function pendingRows(){
+ const f=activeFac();if(!f)return [];
+ const inClose=new Set(itens.map(i=>i.retorno_id));
+ return retornos.filter(r=>Number(r.quantidade_aprovada)>0&&!inClose.has(r.id))
+ .map(r=>{
+  const m=movimentos.find(x=>x.id===r.movimentacao_id);if(!m||m.faccao_id!==f.id)return null;
+  const step=processos.find(x=>x.id===m.processo_id);
+  const price=precos.find(x=>x.faccao_id===f.id&&x.tipo_servico_id===step?.tipo_servico_id&&x.ativo);
+  return {returnId:r.id,date:r.devolvido_em,qty:r.quantidade_aprovada,service:step?.nome||'Serviço sem nome',
+    price:price?Number(price.valor_unitario):null};
+ }).filter(Boolean);
+}
+function render(){
+ const f=activeFac();if(!f){$('prices').innerHTML='Nenhuma facção cadastrada.';$('closings').innerHTML='';return}
+ const pricesFor=precos.filter(p=>p.faccao_id===f.id);
+ $('prices').innerHTML=pricesFor.map(p=>{
+  const t=tipos.find(t=>t.id===p.tipo_servico_id);
+  return '<div class="item top"><div><strong>'+esc(t?.nome||'Serviço')+'</strong><div class="muted">'+(p.ativo?'Ativo':'Desativado')+'</div></div><b>'+brl(p.valor_unitario)+' / peça</b></div>';
+ }).join('')||'<p class="muted">Nenhum valor definido. Cadastre valores por serviço antes de criar fechamentos.</p>';
+ const pending=pendingRows(),unpriced=pending.filter(x=>x.price===null);
+ $('pendingpieces').textContent=pending.reduce((a,r)=>a+r.qty,0);
+ $('pendingvalue').textContent=brl(pending.filter(x=>x.price!==null).reduce((a,r)=>a+r.qty*r.price,0));
+ const closes=fechamentos.filter(x=>x.faccao_id===f.id);
+ $('balance').textContent=brl(closes.reduce((n,x)=>n+closeBalance(x),0));
+ $('missingprices').textContent=unpriced.length?
+  'Atenção: '+unpriced.reduce((a,x)=>a+x.qty,0)+' peça(s) aprovadas ainda não possuem valor de serviço configurado.':
+  'O fechamento inclui somente peças devolvidas e aprovadas que ainda não foram fechadas.';
+ $('closings').innerHTML=closes.map(c=>{
+  const settled=closeBalance(c)<0.005;
+  const count=itens.filter(i=>i.fechamento_id===c.id).reduce((n,i)=>n+i.quantidade_aprovada,0);
+  return '<div class="item"><div class="top"><div><strong>Fechamento nº '+c.numero+'</strong><div class="muted">'+esc(c.periodo_tipo)+' · '+displayDate(c.inicio)+' até '+displayDate(c.fim)+' · '+count+' peças aprovadas</div></div><span class="pill '+(settled?'done':'')+'">'+(settled?'Quitado':'Saldo '+brl(closeBalance(c)))+'</span></div>'+
+   '<p class="tx">Total: <b>'+brl(c.valor_bruto)+'</b> · Pago: <b>'+brl(paid(c.id))+'</b> · A pagar: <b>'+brl(closeBalance(c))+'</b></p>'+
+   '<div class="buttons"><button type="button" class="secondary" data-extract="'+esc(c.id)+'">Ver extrato</button>'+
+   (write&&!settled?'<button type="button" data-pay="'+esc(c.id)+'">Registrar pagamento</button>':'')+'</div></div>';
+ }).join('')||'<p class="muted">Ainda não há fechamentos para esta facção.</p>';
+}
+$('faccao').onchange=render;$('reload').onclick=()=>load(true);
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
+$('newprice').onclick=()=>{
+ const f=activeFac();if(!f)return;
+ const relevant=new Set(processos.filter(x=>x.tipo_servico_id).map(x=>x.tipo_servico_id));
+ $('price_type').innerHTML=tipos.filter(t=>t.ativo&&relevant.has(t.id)).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.nome)+'</option>').join('');
+ if(!$('price_type').options.length){
+  $('price_type').innerHTML=tipos.filter(t=>t.ativo).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.nome)+'</option>').join('');
+ }
+ $('priceform').reset();$('pricedialog').showModal();
+};
+$('price_type').onchange=()=>{
+ const p=precos.find(x=>x.faccao_id===$('faccao').value&&x.tipo_servico_id===$('price_type').value);
+ $('priceform').elements.valor_unitario.value=p?Number(p.valor_unitario).toFixed(2):'';
+};
+$('priceform').onsubmit=async e=>{
+ e.preventDefault();if(!write)return;const f=e.target,btn=$('saveprice');btn.disabled=true;
+ try{
+  const {error}=await db.rpc('zz2_definir_valor_faccao',{p_faccao_id:$('faccao').value,
+    p_tipo_servico_id:f.elements.tipo_servico_id.value,p_valor:Number(f.elements.valor_unitario.value)});
+  if(error)throw error;$('pricedialog').close();await load();msg('Valor unitário salvo. Fechamentos anteriores mantêm seus valores originais.');
+ }catch(err){msg(err.message,true)}finally{btn.disabled=false}
+};
+$('newclose').onclick=()=>{
+ if(!activeFac())return;const f=$('closeform');f.reset();f.elements.fim.value=today();
+ const d=new Date(today()+'T12:00:00');d.setDate(d.getDate()-6);
+ f.elements.inicio.value=d.toISOString().slice(0,10);
+ updatePreview();$('closedialog').showModal();
+};
+function updatePreview(){
+ const f=$('closeform');const begin=f.elements.inicio.value,end=f.elements.fim.value;
+ if(!begin||!end||begin>end){$('closepreview').textContent='Preencha um período válido.';return}
+ const rows=pendingRows().filter(x=>x.date>=begin&&x.date<=end);
+ const missing=rows.filter(x=>x.price===null).length;
+ const qty=rows.reduce((n,r)=>n+r.qty,0),value=rows.filter(x=>x.price!==null).reduce((n,r)=>n+r.qty*r.price,0);
+ $('closepreview').innerHTML='<b>Prévia:</b> '+qty+' peças aprovadas · '+brl(value)+
+  (missing?'<p class="error">Há '+missing+' devolução(ões) sem valor cadastrado. Configure todos os preços antes de confirmar.</p>':'<p class="muted">Essas peças serão vinculadas ao fechamento e não poderão ser fechadas novamente.</p>');
+ $('saveclose').disabled=rows.length===0||missing>0;
+}
+['inicio','fim','periodo_tipo'].forEach(n=>$('closeform').elements[n].addEventListener('change',updatePreview));
+$('closeform').onsubmit=async e=>{
+ e.preventDefault();if(!write)return;const f=e.target,btn=$('saveclose');btn.disabled=true;
+ try{
+  const {error}=await db.rpc('zz2_criar_fechamento',{p_faccao_id:$('faccao').value,
+   p_inicio:f.elements.inicio.value,p_fim:f.elements.fim.value,
+   p_periodo_tipo:f.elements.periodo_tipo.value,p_observacoes:f.elements.observacoes.value||null});
+  if(error)throw error;$('closedialog').close();await load();msg('Fechamento criado com as peças aprovadas no período.');
+ }catch(err){msg(err.message,true)}finally{btn.disabled=false}
+};
+$('closings').onclick=e=>{
+ const b=e.target.closest('[data-pay],[data-extract]');if(!b)return;
+ if(b.dataset.pay)openPay(b.dataset.pay);
+ if(b.dataset.extract)openReceipt(b.dataset.extract);
+};
+function openPay(id){
+ const c=fechamentos.find(x=>x.id===id);if(!c)return;selectedClosing=id;
+ const rem=closeBalance(c);
+ $('paytitle').textContent='Pagamento · Fechamento nº '+c.numero;
+ $('payinfo').textContent='Saldo restante: '+brl(rem)+'. Este lançamento registra um pagamento já realizado fora do sistema.';
+ $('payform').reset();$('payform').elements.valor.value=rem.toFixed(2);
+ $('payform').elements.pago_em.value=today();$('paydialog').showModal();
+}
+$('payform').onsubmit=async e=>{
+ e.preventDefault();const f=e.target,btn=$('savepay');btn.disabled=true;
+ try{
+  const {error}=await db.rpc('zz2_registrar_pagamento',{p_fechamento_id:selectedClosing,
+   p_valor:Number(f.elements.valor.value),p_pago_em:f.elements.pago_em.value,
+   p_meio:f.elements.meio.value,p_observacoes:f.elements.observacoes.value||null});
+  if(error)throw error;$('paydialog').close();await load();msg('Pagamento anotado no fechamento. Nenhum dinheiro foi movimentado pelo sistema.');
+ }catch(err){msg(err.message,true)}finally{btn.disabled=false}
+};
+function openReceipt(id){
+ const c=fechamentos.find(x=>x.id===id);if(!c)return;
+ const f=faccoes.find(x=>x.id===c.faccao_id),list=itens.filter(x=>x.fechamento_id===id),payList=byClosing(id);
+ $('receipt').innerHTML='<h3>ZZIPING Uniformes · Extrato nº '+c.numero+'</h3>'+
+  '<p><strong>Facção:</strong> '+esc(f?.nome)+'<br><strong>Período:</strong> '+displayDate(c.inicio)+' a '+displayDate(c.fim)+
+  '<br><strong>Tipo:</strong> '+esc(c.periodo_tipo)+'</p>'+
+  '<div class="tablewrap"><table><thead><tr><th>Serviço</th><th>Peças</th><th>Unitário</th><th>Total</th></tr></thead><tbody>'+
+  list.map(i=>'<tr><td>'+esc(tipos.find(t=>t.id===i.tipo_servico_id)?.nome)+'</td><td>'+i.quantidade_aprovada+'</td><td>'+brl(i.valor_unitario)+'</td><td>'+brl(i.valor_total)+'</td></tr>').join('')+
+  '</tbody></table></div><p><b>Valor do fechamento: '+brl(c.valor_bruto)+'</b></p>'+
+  '<h3>Pagamentos registrados</h3>'+ (payList.length?payList.map(p=>'<p class="tx">'+displayDate(p.pago_em)+' · '+esc(p.meio)+' · <b>'+brl(p.valor)+'</b></p>').join(''):'<p class="muted">Nenhum pagamento registrado.</p>')+
+  '<p><b>Total pago: '+brl(paid(id))+' · Saldo: '+brl(closeBalance(c))+'</b></p><p class="muted">Extrato interno. Não substitui comprovante bancário ou nota fiscal.</p>';
+ $('receiptdialog').showModal();
+}
+$('printreceipt').onclick=()=>window.print();
+init();
+</script></body></html>
