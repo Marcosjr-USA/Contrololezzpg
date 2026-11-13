@@ -210,7 +210,8 @@ function render(){
    return '<div class="line">Tamanho '+esc(t?.tamanho||'—')+' · '+esc(step?.nome||'')+
    ' · '+(r.quantidade_recebida-r.quantidade_aprovada)+' rejeitada(s) · '+esc(r.observacoes||'Registro anterior sem descrição')+'</div>';
   }).join('');
-  const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
+  const uncutReplacements=replacementRows.filter(r=>r.origem==='novo_corte'&&!cortesReposicao.some(c=>c.reposicao_id===r.id)).reduce((n,r)=>n+r.quantidade,0);
+  const status=p.status!=='em_producao'?'Aguardando liberação':uncutReplacements>0?'Reposição aguardando corte ('+uncutReplacements+' peça(s))':complete?'Corte concluído':'Aguardando corte';
   const replacementButton=canEdit&&p.status==='em_producao'&&!isPaused&&replacementSources(prod.id).length?
    '<button type="button" class="secondary" data-replacement="'+esc(prod.id)+'">Registrar reposição</button>':'';
   const cutBtn=canEdit&&p.status==='em_producao'&&!isPaused&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
