@@ -17,6 +17,10 @@
 <dialog id="checkdialog"><div class="top"><h2 id="checktitle">Conferir produto</h2><button class="secondary" type="button" id="closecheck">Fechar</button></div>
 <p class="muted">As quantidades e as substituições pendentes são preenchidas automaticamente conforme as devoluções aprovadas. Confirme que as peças estão boas; ajuste apenas se houver defeitos ou divergências.</p>
 <form id="checkform"><div id="checksummary" class="note"></div>
+<div id="replacementverify" class="hidden" style="padding:12px;margin-top:10px;border:1px solid #e6c788;border-radius:8px">
+<label style="display:flex;gap:10px;align-items:center"><input id="replacementverified" type="checkbox" style="width:auto;min-height:0;margin:0">
+Confirmei fisicamente que a peça substituta concluiu os processos e está aprovada</label>
+<p class="muted">Marque somente após verificar a peça. O sistema preencherá automaticamente a quantidade de substituições usadas.</p></div>
 <details id="checkdetails"><summary><b>Ajustar por tamanho (defeitos, reservas ou aprovação parcial)</b></summary>
 <p class="muted">Abra esta seção somente se encontrou peças com defeito ou precisa ajustar o resultado. Caso contrário, mantenha os valores automáticos.</p><div id="checkrows"></div>
 <label>Descrição dos defeitos / observações<input name="observacoes" maxlength="500" placeholder="Ex.: peça com defeito, reserva utilizada"></label></details>
@@ -157,13 +161,16 @@ function openCheck(id){
    ' · Reservas ainda não usadas: '+reserveFree+'</p><div class="grade-inputs">'+
    '<label>Aprovar<input class="goodqty" type="number" min="0" max="'+Math.min(pending,st.available)+'" value="'+recommended+'" required></label>'+
    '<label>Defeituosas<input class="badqty" type="number" min="0" max="'+st.available+'" value="0" required></label>'+
-   '<label>Substituição / reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="'+recommendedReserve+'" required></label>'+
+   '<label>Substituição / reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="0" data-suggest="'+recommendedReserve+'" required></label>'+
    '</div></div>';
  }).join('');
  const missing=Math.max(0,pendingTotal-recommendedTotal);
  $('checksummary').innerHTML=recommendedTotal>0?
   '<strong>Prontas para conferência: '+recommendedTotal+' peça(s)</strong><p class="muted">Preenchimento automático com base nas devoluções aprovadas da última etapa. '+(missing>0?'Ainda faltarão '+missing+' peça(s) deste produto para completar o pedido.':'Todas as peças vendidas deste produto poderão ficar aprovadas.')+'</p>':
   '<strong>Nenhuma peça disponível para conferência.</strong><p class="muted">As peças ainda precisam retornar aprovadas do último processo de produção. Você não precisa preencher nada agora.</p>';
+ const suggested=[...$('checkrows').querySelectorAll('.reserveqty')].reduce((n,input)=>n+Number(input.dataset.suggest||0),0);
+ $('replacementverify').classList.toggle('hidden',suggested===0);
+ $('replacementverified').checked=false;
  $('savecheck').disabled=recommendedTotal===0;
  $('savecheck').textContent='Confirmar '+recommendedTotal+' peça(s) aprovadas';
  $('checkrows').querySelectorAll('[data-size]').forEach(row=>{
@@ -178,6 +185,12 @@ function openCheck(id){
  });
  $('checkdialog').showModal();
 }
+$('replacementverified').onchange=e=>{
+ for(const input of $('checkrows').querySelectorAll('.reserveqty')){
+  input.value=e.target.checked?String(Math.min(Number(input.dataset.suggest||0),Number(input.max)||0)):'0';
+ }
+ updateCheckButton();
+};
 function updateCheckButton(){
  const rows=[...$('checkrows').querySelectorAll('[data-size]')];
  const quantity=rows.reduce((n,row)=>n+(Number(row.querySelector('.goodqty').value)||0),0);
@@ -206,6 +219,8 @@ $('checkform').onsubmit=async e=>{
    return {tamanho_id:t.id,aprovadas,defeituosas,reservas_utilizadas:reservas};
   });
   if(!itens.some(x=>x.aprovadas+x.defeituosas>0))throw Error('Ainda não existem novas peças disponíveis para conferir.');
+  if(itens.some(x=>x.reservas_utilizadas>0)&&!$('replacementverified').checked&&!$('replacementverify').classList.contains('hidden'))
+    throw Error('Confirme a chegada das peças substitutas antes de usar a reserva.');
   if(itens.some(x=>x.defeituosas>0)&&form.elements.observacoes.value.trim().length<5)
    throw Error('Descreva o defeito encontrado na conferência (mínimo 5 caracteres).');
   const {data,error}=await db.rpc('zz2_registrar_conferencia_lote',{p_produto_id:selectedProduct,p_itens:itens,p_observacoes:form.elements.observacoes.value.trim()||null});
