@@ -428,7 +428,7 @@ $('replacementform').onsubmit=async e=>{
   const {error}=await db.rpc('zz2_solicitar_reposicao',{
    p_tamanho_id:src.sizeId,
    p_retorno_defeito_id:fromReturn?src.id.slice(8):null,
-   p_conferencia_defeito_id:fromReturn?null:src.id.slice(11),
+   p_conferencia_defeito_id:fromReturn?null:src.id.slice('conferencia:'.length),
    p_quantidade:qty,p_origem:origin,p_motivo:reason
   });
   if(error)throw error;
