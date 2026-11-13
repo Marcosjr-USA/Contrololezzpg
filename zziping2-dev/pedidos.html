@@ -40,8 +40,10 @@ dialog::backdrop{background:#111a27a8}.foot{color:#66707a;font-size:12px;margin:
 <div class="stats"><span class="stat">Pedidos <b id="norders">0</b></span><span class="stat">Produtos <b id="nproducts">0</b></span><span class="stat">Peças vendidas <b id="npieces">0</b></span></div>
 <label>Pesquisar por número, cliente ou observação<input id="search" type="search" placeholder="Ex.: 2026-015 ou Abrafer"></label>
 <div id="orders"></div></div>
-<section id="detail" class="card hidden"><div class="top"><h2 id="detailtitle">Pedido</h2><button class="secondary" id="closedetail">Fechar detalhes</button></div><div id="detailmeta"></div><div class="top"><h3>Produtos deste pedido</h3><button id="newproduct">+ Adicionar produto</button></div><div id="productlist"></div></section>
+<section id="detail" class="card hidden"><div class="top"><h2 id="detailtitle">Pedido</h2><div class="actions"><button class="secondary" id="editorder" type="button">Corrigir dados</button><button class="secondary" id="closedetail">Fechar detalhes</button></div></div><div id="detailmeta"></div><div id="ordercorrections"></div><div class="top"><h3>Produtos deste pedido</h3><button id="newproduct">+ Adicionar produto</button></div><div id="productlist"></div></section>
 </section>
+<dialog id="correctorderdialog" style="width:min(690px,calc(100% - 20px));border:1px solid #ccc;border-radius:12px;padding:16px"><h2>Corrigir dados do pedido</h2><form id="correctorderform" novalidate><div class="grid"><label>Número do pedido<input name="numero_externo" maxlength="80" required></label><label>Cliente cadastrado<select id="correctclient" name="cliente_id"></select></label></div><label>Cliente / nome de referência<input name="cliente_nome_livre" maxlength="200"></label><div class="grid"><label>Prioridade<select name="prioridade"><option value="normal">Normal</option><option value="urgente">Urgente</option><option value="maxima">Máxima</option></select></label><label>Entrega<input name="prazo_entrega" type="date" required></label></div><label>Observações<textarea name="observacoes"></textarea></label><label>Motivo da alteração<textarea name="motivo" minlength="5" maxlength="1000" required></textarea></label><p class="muted">As quantidades, os tamanhos e os processos continuam preservados.</p><p id="correctordererror" class="error"></p><div class="actions"><button id="savecorrectorder" type="submit">Salvar correção</button><button type="button" class="secondary" id="cancelcorrectorder">Cancelar</button></div></form></dialog>
+<dialog id="correctproductdialog" style="width:min(560px,calc(100% - 20px));border:1px solid #ccc;border-radius:12px;padding:16px"><h2>Corrigir descrição do produto</h2><form id="correctproductform" novalidate><label>Nome correto<input name="descricao" maxlength="240" required></label><label>Motivo<textarea name="motivo" minlength="5" maxlength="1000" required></textarea></label><p id="correctproducterror" class="error"></p><div class="actions"><button id="savecorrectproduct" type="submit">Salvar correção</button><button id="cancelcorrectproduct" class="secondary" type="button">Cancelar</button></div></form></dialog>
 <dialog id="orderdialog"><div class="top"><h2>Novo pedido · rascunho</h2><button class="secondary" type="button" id="closeorder">Fechar</button></div><form id="orderform">
 <div class="grid"><label>Número do pedido externo*<input name="numero_externo" required maxlength="80" placeholder="Ex.: 10527"></label>
 <label>Cliente cadastrado (opcional)<select name="cliente_id" id="cliente_id"><option value="">Escolher ou informar abaixo</option></select></label></div>
@@ -74,7 +76,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const moneyDate=d=>d?d.split('-').reverse().join('/'):'—';
 const dateNow=()=>{const d=new Date(),local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
 let db=null,session=null,me=null,perms=null,selected=null,write=false;
-let clients=[],types=[],orders=[],products=[],sizes=[],stages=[],editingProcessProduct=null;
+let clients=[],types=[],orders=[],products=[],sizes=[],stages=[],orderCorrections=[],editingProcessProduct=null,editingNameProduct=null;
 function msg(t,isError=false){$('notice').textContent=t||'';$('notice').className=isError?'error':'good'}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function guard(error){msg(error?.message||String(error),true)}
@@ -102,8 +104,8 @@ async function start(){
 }
 async function load(keepNotice=false){
  try{
-  const result=await Promise.all([query('clientes'),query('tipos_servico'),query('pedidos'),query('pedido_produtos'),query('produto_tamanhos'),query('produto_processos')]);
-  [clients,types,orders,products,sizes,stages]=result;
+  const result=await Promise.all([query('clientes'),query('tipos_servico'),query('pedidos'),query('pedido_produtos'),query('produto_tamanhos'),query('produto_processos'),query('correcoes_pedidos')]);
+  [clients,types,orders,products,sizes,stages,orderCorrections]=result;
   orders.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
   render();
   if(selected)await openOrder(selected,false);
@@ -117,21 +119,26 @@ function render(){
  $('orders').innerHTML=orders.filter(o=>[o.numero_externo,o.cliente_nome_livre,clientName(o),o.observacoes].join(' ').toLowerCase().includes(q))
  .map(o=>{
   const items=products.filter(p=>p.pedido_id===o.id),total=items.reduce((n,x)=>n+x.quantidade_vendida,0);
-  return '<div class="list-row"><div><strong>Pedido '+esc(o.numero_externo)+'</strong><small>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.prioridade)+' · Entrega '+moneyDate(o.prazo_entrega)+'</small><small>'+items.length+' produto(s) · '+total+' peça(s) vendida(s) · '+esc(o.status==='pronto'?'Pronto':o.status==='em_producao'?'Em produção':'Rascunho')+'</small></div><button class="secondary" data-open="'+esc(o.id)+'">Detalhes</button></div>'
+  return '<div class="list-row"><div><strong>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(o.numero_externo)+'</strong><small>'+esc(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · '+esc(o.prioridade)+' · Entrega '+moneyDate(o.prazo_entrega)+'</small><small>'+items.length+' produto(s) · '+total+' peça(s) vendida(s) · '+esc(o.status==='pronto'?'Pronto':o.status==='em_producao'?'Em produção':'Rascunho')+'</small></div><button class="secondary" data-open="'+esc(o.id)+'">Detalhes</button></div>'
  }).join('')||'<p class="muted">Nenhum pedido encontrado. Cadastre um novo pedido para começar.</p>';
 }
 function clientName(o){return clients.find(c=>c.id===o.cliente_id)?.nome||''}
 function meta(o){return '<dl><dt>Número externo</dt><dd>'+esc(o.numero_externo)+'</dd><dt>Cliente</dt><dd>'+esc(clientName(o)||o.cliente_nome_livre||'—')+'</dd><dt>Prioridade</dt><dd>'+esc(o.prioridade)+'</dd><dt>Entrega</dt><dd>'+moneyDate(o.prazo_entrega)+'</dd><dt>Status</dt><dd>'+esc(o.status==='pronto'?'Pronto — conferência final aprovada':o.status==='em_producao'?'Em produção':'Rascunho — ainda sem lançamento de produção')+'</dd><dt>Observações</dt><dd>'+esc(o.observacoes||'—')+'</dd></dl>'}
 async function openOrder(id,scroll=true){
  const o=orders.find(v=>v.id===id);if(!o){selected=null;show('detail',false);return}
- selected=id;show('detail',true);$('detailtitle').textContent='Pedido '+o.numero_externo;
+ selected=id;show('detail',true);$('detailtitle').textContent=(clientName(o)||o.cliente_nome_livre||'Cliente não informado')+' · Pedido '+o.numero_externo;
+ $('editorder').classList.toggle('hidden',!write);
  $('newproduct').classList.toggle('hidden',!write||o.status!=='rascunho');
  $('detailmeta').innerHTML=meta(o);
+ const changes=orderCorrections.filter(c=>c.pedido_id===id).sort((a,b)=>b.corrigido_em.localeCompare(a.corrigido_em));
+ $('ordercorrections').innerHTML=changes.length?'<details><summary>Histórico de correções ('+changes.length+')</summary>'+
+ changes.map(c=>'<p class="muted">'+esc(new Date(c.corrigido_em).toLocaleString('pt-BR'))+' · '+esc(c.motivo)+
+ '<br>Antes: '+esc(JSON.stringify(c.antes))+'<br>Depois: '+esc(JSON.stringify(c.depois))+'</p>').join('')+'</details>':'';
  const items=products.filter(v=>v.pedido_id===id);
  $('productlist').innerHTML=items.map(p=>{
   const grade=sizes.filter(s=>s.produto_id===p.id);
   const steps=stages.filter(s=>s.produto_id===p.id).sort((a,b)=>a.ordem-b.ordem);
-  return '<div class="item"><div class="top"><strong>'+esc(p.descricao)+'</strong><span class="pill">'+p.quantidade_vendida+' peças vendidas</span></div><small class="muted">Grade: '+esc(p.grade_tipo)+'</small><p><b>Tamanhos:</b> '+grade.map(g=>esc(g.tamanho)+' ('+g.quantidade_vendida+')').join(' · ')+'</p><p><b>Processos:</b> '+steps.map(x=>x.ordem+'. '+esc(x.nome)+(x.prazo_dias_uteis===null?'':' ('+x.prazo_dias_uteis+' dias úteis)')).join(' → ')+'</p>'+ (p.observacoes?'<p class="muted">'+esc(p.observacoes)+'</p>':'')+(write?'<div class="actions"><button class="secondary" type="button" data-editprocess="'+esc(p.id)+'">Editar processos</button></div>':'')+'</div>'
+  return '<div class="item"><div class="top"><strong>'+esc(p.descricao)+'</strong><span class="pill">'+p.quantidade_vendida+' peças vendidas</span></div><small class="muted">Grade: '+esc(p.grade_tipo)+'</small><p><b>Tamanhos:</b> '+grade.map(g=>esc(g.tamanho)+' ('+g.quantidade_vendida+')').join(' · ')+'</p><p><b>Processos:</b> '+steps.map(x=>x.ordem+'. '+esc(x.nome)+(x.prazo_dias_uteis===null?'':' ('+x.prazo_dias_uteis+' dias úteis)')).join(' → ')+'</p>'+ (p.observacoes?'<p class="muted">'+esc(p.observacoes)+'</p>':'')+(write?'<div class="actions"><button class="secondary" type="button" data-editprocess="'+esc(p.id)+'">Editar processos</button><button class="secondary" type="button" data-renameproduct="'+esc(p.id)+'">Corrigir nome</button></div>':'')+'</div>'
  }).join('')||'<p class="muted">Ainda não há produtos. Use “Adicionar produto” para criar grades e processos.</p>';
  if(scroll)$('detail').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -217,6 +224,7 @@ $('addstep').onclick=()=>stepLine();
 $('search').oninput=render;
 $('orders').onclick=e=>{const button=e.target.closest('[data-open]');if(button)openOrder(button.dataset.open)};
 $('productlist').onclick=e=>{
+ const rename=e.target.closest('[data-renameproduct]');if(rename){openRenameProduct(rename.dataset.renameproduct);return}
  const b=e.target.closest('[data-editprocess]');if(b)openProcessEditor(b.dataset.editprocess);
 };
 function openProcessEditor(id){
@@ -269,6 +277,50 @@ $('productform').onsubmit=async e=>{
   });if(error)throw error;if(!data)throw Error('Produto não foi criado');
   $('productdialog').close();await load(true);msg('Produto, grade e processos salvos com sucesso.');
  }catch(e){guard(e)}finally{busy(btn,false,'Salvar produto + grade + processos')}
+};
+$('editorder').onclick=()=>{
+ const o=orders.find(x=>x.id===selected);if(!o||!write)return;
+ const f=$('correctorderform');f.reset();$('correctordererror').textContent='';
+ $('correctclient').innerHTML='<option value="">Cliente avulso / referência</option>'+clients.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>').join('');
+ f.elements.numero_externo.value=o.numero_externo;f.elements.cliente_id.value=o.cliente_id||'';
+ f.elements.cliente_nome_livre.value=o.cliente_nome_livre||'';
+ f.elements.prioridade.value=o.prioridade;f.elements.prazo_entrega.value=o.prazo_entrega;
+ f.elements.observacoes.value=o.observacoes||'';
+ $('correctorderdialog').showModal();
+};
+$('cancelcorrectorder').onclick=()=>$('correctorderdialog').close();
+$('cancelcorrectproduct').onclick=()=>$('correctproductdialog').close();
+function openRenameProduct(id){
+ if(!write)return;const p=products.find(x=>x.id===id);if(!p)return;
+ editingNameProduct=id;const f=$('correctproductform');f.reset();f.elements.descricao.value=p.descricao;
+ $('correctproducterror').textContent='';$('correctproductdialog').showModal();
+}
+$('correctorderform').onsubmit=async e=>{
+ e.preventDefault();if(!write||!selected)return;
+ const f=e.target,btn=$('savecorrectorder');$('correctordererror').textContent='';
+ try{
+  const params={p_pedido_id:selected,p_numero:f.elements.numero_externo.value.trim(),
+  p_cliente_id:f.elements.cliente_id.value||null,p_cliente_nome_livre:f.elements.cliente_nome_livre.value.trim()||null,
+  p_prioridade:f.elements.prioridade.value,p_prazo_entrega:f.elements.prazo_entrega.value,
+  p_observacoes:f.elements.observacoes.value.trim()||null,p_motivo:f.elements.motivo.value.trim()};
+  if(!params.p_numero||!params.p_prazo_entrega||(!params.p_cliente_id&&!params.p_cliente_nome_livre))throw Error('Preencha número, cliente e prazo.');
+  if(params.p_motivo.length<5)throw Error('Informe um motivo de pelo menos 5 caracteres.');
+  busy(btn,true);
+  const {error}=await db.rpc('zz2_corrigir_dados_pedido',params);if(error)throw error;
+  $('correctorderdialog').close();await load(true);msg('Dados corrigidos e preservados no histórico.');
+ }catch(err){$('correctordererror').textContent=err.message;guard(err)}finally{busy(btn,false,'Salvar correção')}
+};
+$('correctproductform').onsubmit=async e=>{
+ e.preventDefault();if(!write||!editingNameProduct)return;const f=e.target,btn=$('savecorrectproduct');
+ $('correctproducterror').textContent='';
+ try{
+  if(f.elements.descricao.value.trim().length<2||f.elements.motivo.value.trim().length<5)throw Error('Informe descrição e motivo.');
+  busy(btn,true);
+  const {error}=await db.rpc('zz2_corrigir_descricao_produto',{
+    p_produto_id:editingNameProduct,p_descricao:f.elements.descricao.value.trim(),p_motivo:f.elements.motivo.value.trim()
+  });if(error)throw error;
+  $('correctproductdialog').close();editingNameProduct=null;await load(true);msg('Descrição corrigida com histórico.');
+ }catch(err){$('correctproducterror').textContent=err.message;guard(err)}finally{busy(btn,false,'Salvar correção')}
 };
 start();
 </script></body></html>
