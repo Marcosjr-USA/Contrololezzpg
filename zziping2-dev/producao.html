@@ -1,13 +1,14 @@
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 • Produção</title>
 <style>
-:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#1f2630}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:white;border-bottom:4px solid #bc1c30;padding:16px 5%}h1{margin:0;font-size:23px}header small{color:#c9cbd0}.shell{max-width:1100px;margin:auto;padding:13px}.card{background:white;padding:17px;border:1px solid #e0e3e8;border-radius:12px;margin:12px 0}.warn{background:#fff2d8;border:1px solid #edc578;border-radius:8px;padding:12px;font-size:14px}button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0;background:#b61b30;color:white;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;min-height:42px}button.secondary,.button.secondary{background:#e8ebef;color:#242b35}button:disabled{opacity:.5;cursor:not-allowed}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.muted{font-size:13px;color:#687281}.hidden{display:none!important}.good{color:#087a43}.error{color:#bc1b30}#notice{white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;font-weight:600}input,select,textarea{width:100%;padding:10px;min-height:41px;border:1px solid #c8cdd5;border-radius:8px;font:inherit;margin:5px 0 11px;background:white}.row{border-top:1px solid #e9ebee;padding:12px 0}.stage-row{border-left:4px solid #b5bbc3;padding-left:10px}.stage-row.status-progress{border-left-color:#dc860f;background:#fffaf0}.stage-row.status-done{border-left-color:#23864e;background:#f3fbf6}.stage-row.status-late{border-left-color:#c82d36;background:#fff5f5}
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#1f2630}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:white;border-bottom:4px solid #bc1c30;padding:16px 5%}h1{margin:0;font-size:23px}header small{color:#c9cbd0}.shell{max-width:1100px;margin:auto;padding:13px}.card{background:white;padding:17px;border:1px solid #e0e3e8;border-radius:12px;margin:12px 0}.warn{background:#fff2d8;border:1px solid #edc578;border-radius:8px;padding:12px;font-size:14px}button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0;background:#b61b30;color:white;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;min-height:42px}button.secondary,.button.secondary{background:#e8ebef;color:#242b35}button:disabled{opacity:.5;cursor:not-allowed}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.muted{font-size:13px;color:#687281}.hidden{display:none!important}.good{color:#087a43}.error{color:#bc1b30}#notice{white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;font-weight:600}input,select,textarea{width:100%;padding:10px;min-height:41px;border:1px solid #c8cdd5;border-radius:8px;font:inherit;margin:5px 0 11px;background:white}.row{border-top:1px solid #e9ebee;padding:12px 0}.stage-row{border-left:4px solid #b5bbc3;padding-left:10px}.stage-row.status-progress{border-left-color:#dc860f;background:#fffaf0}.stage-row.status-done{border-left-color:#23864e;background:#f3fbf6}.stage-row.status-late{border-left-color:#c82d36;background:#fff5f5}.stage-row.status-awaiting{border-left-color:#8561a8;background:#f8f3fc}
 .status-chip{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;border-radius:6px;padding:5px 8px;vertical-align:middle;background:#e8ebef;color:#353f4b}
-.status-chip.status-progress{background:#ffedc4;color:#86500c}.status-chip.status-done{background:#d8f2df;color:#116d37}.status-chip.status-late{background:#fbdadd;color:#9b1b28}
+.status-chip.status-progress{background:#ffedc4;color:#86500c}.status-chip.status-done{background:#d8f2df;color:#116d37}.status-chip.status-late{background:#fbdadd;color:#9b1b28}.status-chip.status-awaiting{background:#ebdef6;color:#684083}
 button.secondary.stage-action{font-weight:700;border:1px solid transparent}
 button.secondary.stage-action.status-idle{background:#e8ebef;color:#303945}
 button.secondary.stage-action.status-progress{background:#de8b18;color:#1c160b}
 button.secondary.stage-action.status-done{background:#228448;color:white}
 button.secondary.stage-action.status-late{background:#bf2934;color:white}
+button.secondary.stage-action.status-awaiting{background:#ebdef6;color:#684083}
 button.secondary.stage-action:disabled{opacity:1;cursor:default}
 button.secondary.stage-action.status-progress:disabled,button.secondary.stage-action.status-late:disabled{opacity:.8}
 .item{background:#fcfcfd;border:1px solid #e0e4e8;border-radius:9px;padding:14px;margin:12px 0}.pill{border-radius:20px;background:#fce8eb;color:#941a2a;font-weight:700;padding:5px 9px;font-size:12px}.metrics{display:flex;flex-wrap:wrap;gap:10px}.metric{background:#f6f0f1;border-radius:9px;padding:9px 13px;font-size:13px}h2{font-size:20px;margin:4px 0 13px}h3{font-size:17px;margin:8px 0}.line{font-size:14px;margin:5px 0;overflow-wrap:anywhere}.line span{color:#62707f}.cutrow{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;border-bottom:1px solid #eceef0;padding:8px 0}.cutrow input{margin:0}.mov{padding:10px;border:1px solid #e3e7ed;border-radius:8px;margin:8px 0;font-size:14px}.mov small{display:block;color:#697381}.return-partial-row{border:1px solid #e3e6eb;border-radius:9px;margin:8px 0;padding:10px}.return-partial-row .grid{grid-template-columns:1fr 1fr}.return-action{background:#255f99;color:white}.return-action:hover{background:#204f80}
@@ -151,6 +152,7 @@ function stageStatus(stage,sizes){
  const sent=related.reduce((n,m)=>n+m.quantidade_enviada,0);
  const receivedQty=related.reduce((n,m)=>n+received(m.id),0);
  const approvedQty=related.reduce((n,m)=>n+approved(m.id),0);
+ const rejectedQty=Math.max(0,receivedQty-approvedQty);
  const pending=sent-receivedQty;
  const late=related.some(m=>m.quantidade_enviada>received(m.id)&&m.prazo_previsto&&m.prazo_previsto<today());
  const availableQty=sizes.reduce((n,t)=>n+available(t.id,stage.id),0);
@@ -159,14 +161,24 @@ function stageStatus(stage,sizes){
    sizes.length>0&&sizes.every(t=>!!cortes.find(c=>c.produto_tamanho_id===t.id)):
    !!prev&&stageStatus(prev,sizes).id==='done';
  const expected=sizes.reduce((n,t)=>n+(stage.ordem===2?
-  ((cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0)+cortesReposicao.filter(x=>x.produto_tamanho_id===t.id).reduce((n,x)=>n+x.quantidade,0)):
+  ((cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0)+
+   cortesReposicao.filter(x=>x.produto_tamanho_id===t.id).reduce((sum,x)=>sum+x.quantidade,0)):
   approvedTotal(t.id,prev?.id)),0);
- const hasReject=receivedQty>approvedQty;
- const done=sent>0&&previousFinished&&availableQty===0&&pending===0&&!hasReject&&approvedQty===expected;
- if(late)return {id:'late',name:'Atrasado',availableQty,sent,receivedQty,pending};
- if(done)return {id:'done',name:'Concluído',availableQty,sent,receivedQty,pending};
- if(sent>0)return {id:'progress',name:'Em andamento',availableQty,sent,receivedQty,pending};
- return {id:'idle',name:'Não iniciado',availableQty,sent,receivedQty,pending};
+ const minimumApproved=sizes.reduce((n,t)=>n+(stage.ordem===2?
+  (cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0):
+  approvedTotal(t.id,prev?.id)),0);
+ const uncut=sizes.reduce((n,t)=>n+reposicoes.filter(r=>r.produto_tamanho_id===t.id&&r.origem==='novo_corte'&&
+  !cortesReposicao.some(c=>c.reposicao_id===r.id)).reduce((sum,r)=>sum+r.quantidade,0),0);
+ const fullyProcessed=sent>=expected&&approvedQty+rejectedQty>=expected&&
+  approvedQty>=minimumApproved&&pending===0&&availableQty===0&&uncut===0;
+ const done=sent>0&&previousFinished&&fullyProcessed;
+ const waitingForReplacement=sent>0&&pending===0&&availableQty===0&&!done&&
+  (uncut>0||rejectedQty>0||(!previousFinished&&prev!=null));
+ if(late)return {id:'late',name:'Atrasado',availableQty,sent,receivedQty,pending,rejectedQty};
+ if(done)return {id:'done',name:'Concluído',availableQty,sent,receivedQty,pending,rejectedQty};
+ if(waitingForReplacement)return {id:'awaiting',name:'Aguardando reposição',availableQty,sent,receivedQty,pending,rejectedQty,uncut};
+ if(sent>0)return {id:'progress',name:'Em andamento',availableQty,sent,receivedQty,pending,rejectedQty};
+ return {id:'idle',name:'Não iniciado',availableQty,sent,receivedQty,pending,rejectedQty};
 }
 function render(){
  const p=pedidos.find(x=>x.id===$('order').value);
@@ -219,14 +231,15 @@ function render(){
    const state=stageStatus(s,sz);
    const canSend=canEdit&&p.status==='em_producao'&&!isPaused&&state.availableQty>0;
    const waiting=state.availableQty===0&&state.sent===0;
-   const action=isPaused?'Produção pausada':state.id==='done'?'Concluído':state.id==='late'?'Atrasado':state.id==='progress'?'Em andamento':waiting?'Aguardando peças':'Enviar peças';
+   const action=isPaused?'Produção pausada':state.id==='done'?'Concluído':state.id==='late'?'Atrasado':state.id==='progress'?'Em andamento':state.id==='awaiting'?'Aguardando reposição':waiting?'Aguardando peças':'Enviar peças';
    const previous=steps.find(x=>x.ordem===s.ordem-1);
    const reason=waiting?
      (s.ordem===2?'O corte ainda não disponibilizou peças para esta etapa.':
        'A etapa anterior ('+(previous?.nome||'processo anterior')+') ainda não tem peças devolvidas e aprovadas disponíveis. Registre a devolução aprovada antes de encaminhar para '+s.nome+'.'):
      state.id==='done'?'Esta etapa já foi concluída.':
      state.id==='late'?'Há peças enviadas aguardando devolução após o prazo.':
-     state.id==='progress'?'Há peças em andamento, mas nenhuma disponível para novo envio. Aguarde ou registre a devolução.':
+     state.id==='awaiting'?'As devoluções desta etapa já foram lançadas, mas ainda faltam peças aprovadas para completar o produto. Conclua o corte da reposição, envie a substituta pelos processos e registre sua devolução.':
+     state.id==='progress'?'Há peças em andamento. Aguarde o retorno das peças ainda pendentes.':
      'Não há peças disponíveis para envio neste momento.';
    const button=canEdit&&p.status==='em_producao'&&!isPaused?
     '<button type="button" class="secondary stage-action status-'+state.id+'"'+
@@ -239,7 +252,7 @@ function render(){
      '<div class="muted" style="margin-top:5px">ℹ '+esc(reason)+'</div>':'';
    return '<div class="row stage-row status-'+state.id+'"><div class="top"><div><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+chip+'</div><div class="actions">'+returnButton+button+'</div></div>'+
      '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
-     ' · Devolvidas: '+state.receivedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div>'+note+'</div>';
+     ' · Devolvidas: '+state.receivedQty+' · Rejeitadas: '+state.rejectedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div>'+note+'</div>';
   }).join('');
   return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+' · Novos cortes de reposição: '+extraCuts+
   ' · Rejeitadas nos processos: '+rejected+' · Reposições pendentes: '+pendingReplacement+'</div>'+
