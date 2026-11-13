@@ -37,7 +37,7 @@ const $=x=>document.getElementById(x),esc=v=>String(v??'').replace(/[&<>"']/g,c=
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const displayDate=v=>v?v.split('-').reverse().join('/'):'—';
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
-let db,user,profile,perms,write=false;let faccoes=[],tipos=[],precos=[],retornos=[],movimentos=[],processos=[],fechamentos=[],itens=[],pagamentos=[],pedidos=[],produtos=[],tamanhos=[];let selectedCostProduct=null;
+let db,user,profile,perms,write=false;let faccoes=[],tipos=[],precos=[],retornos=[],movimentos=[],processos=[],fechamentos=[],itens=[],pagamentos=[],pedidos=[],produtos=[],tamanhos=[],clientes=[];let selectedCostProduct=null;
 let selectedClosing=null;
 function msg(s,error=false){$('notice').textContent=s||'';$('notice').className=error?'error':'ok'}
 function visible(k,on){$(k).classList.toggle('hidden',!on)}
@@ -67,8 +67,8 @@ async function init(){
 async function load(showMessage=false){
  const selected=$('faccao').value;
  try{
-  [faccoes,tipos,precos,retornos,movimentos,processos,fechamentos,itens,pagamentos,pedidos,produtos,tamanhos]=await Promise.all(
-   ['faccoes','tipos_servico','valores_faccoes','retornos_producao','movimentacoes_producao','produto_processos','fechamentos_faccoes','fechamento_itens','pagamentos_faccoes','pedidos','pedido_produtos','produto_tamanhos'].map(fetchTable));
+  [faccoes,tipos,precos,retornos,movimentos,processos,fechamentos,itens,pagamentos,pedidos,produtos,tamanhos,clientes]=await Promise.all(
+   ['faccoes','tipos_servico','valores_faccoes','retornos_producao','movimentacoes_producao','produto_processos','fechamentos_faccoes','fechamento_itens','pagamentos_faccoes','pedidos','pedido_produtos','produto_tamanhos','clientes'].map(fetchTable));
   faccoes.sort((a,b)=>a.nome.localeCompare(b.nome));fechamentos.sort((a,b)=>b.numero-a.numero);
   $('faccao').innerHTML=faccoes.map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
   $('faccao').value=faccoes.some(f=>f.id===selected)?selected:(faccoes[0]?.id||'');
@@ -107,7 +107,7 @@ function renderProductCosts(){
  $('productcosts').innerHTML=related.map(entry=>{
   const total=entry.rows.reduce((a,r)=>a+(r.price===null?0:r.price*r.qty),0);
   const missing=entry.rows.filter(r=>r.price===null).length;
-  return '<div class="item top"><div><strong>'+esc(entry.p.descricao)+'</strong><div class="muted">Pedido '+esc(entry.order?.numero_externo||'—')+' · '+entry.rows.map(r=>esc(r.step.nome)+' ('+r.qty+')').join(' · ')+'</div>'+
+  return '<div class="item top"><div><strong>'+esc(entry.p.descricao)+'</strong><div class="muted">'+esc(clientes.find(c=>c.id===entry.order?.cliente_id)?.nome||entry.order?.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(entry.order?.numero_externo||'—')+' · '+entry.rows.map(r=>esc(r.step.nome)+' ('+r.qty+')').join(' · ')+'</div>'+
    '<div class="muted">'+(missing?missing+' serviço(s) aguardam preço':'Custos precificados')+' · Subtotal conhecido: '+brl(total)+'</div></div>'+
    '<button type="button" class="secondary" data-cost="'+esc(entry.p.id)+'">Ver custos</button></div>';
  }).join('')||'<p class="muted">Nenhum serviço externo aprovado desta facção nos pedidos.</p>';
@@ -125,7 +125,7 @@ function openCosts(id){
  const entry=produtos.find(x=>x.id===id),fac=activeFac();if(!entry||!fac)return;
  selectedCostProduct=id;
  const order=pedidos.find(p=>p.id===entry.pedido_id);
- $('costtitle').textContent='Custos · '+entry.descricao+' · Pedido '+(order?.numero_externo||'');
+ $('costtitle').textContent='Custos · '+entry.descricao+' · '+(clientes.find(c=>c.id===order?.cliente_id)?.nome||order?.cliente_nome_livre||'Cliente não informado')+' · Pedido '+(order?.numero_externo||'');
  const external=completedExternalRows(id);
  const internal=processos.filter(p=>p.produto_id===id&&p.origem!=='facção');
  const internalHtml=internal.map(x=>'<div class="item"><strong>'+esc(x.nome)+'</strong> · Processo interno (sem pagamento de facção)</div>').join('');
