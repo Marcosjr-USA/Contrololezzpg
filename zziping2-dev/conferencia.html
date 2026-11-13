@@ -15,7 +15,7 @@
 <div class="card"><h2>Produtos por tamanho</h2><div id="products"></div></div>
 <div class="card"><h2>Histórico de conferências</h2><div id="history"></div></div></section>
 <dialog id="checkdialog"><div class="top"><h2 id="checktitle">Conferir produto</h2><button class="secondary" type="button" id="closecheck">Fechar</button></div>
-<p class="muted">As quantidades são preenchidas automaticamente conforme as peças que já retornaram aprovadas da última etapa. Você só precisa confirmar que as peças estão boas.</p>
+<p class="muted">As quantidades e as substituições pendentes são preenchidas automaticamente conforme as devoluções aprovadas. Confirme que as peças estão boas; ajuste apenas se houver defeitos ou divergências.</p>
 <form id="checkform"><div id="checksummary" class="note"></div>
 <details id="checkdetails"><summary><b>Ajustar por tamanho (defeitos, reservas ou aprovação parcial)</b></summary>
 <p class="muted">Abra esta seção somente se encontrou peças com defeito ou precisa ajustar o resultado. Caso contrário, mantenha os valores automáticos.</p><div id="checkrows"></div>
@@ -29,7 +29,7 @@ const SB_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db=null,profile=null,permission=null,canWrite=false,selectedProduct=null;
-let pedidos=[],produtos=[],tamanhos=[],etapas=[],movimentos=[],retornos=[],cortes=[],conferencias=[],clientes=[];
+let pedidos=[],produtos=[],tamanhos=[],etapas=[],movimentos=[],retornos=[],cortes=[],conferencias=[],clientes=[],reposicoes=[],cortesReposicao=[],reposicoesConferidas=[];
 const show=(id,on)=>$(id).classList.toggle('hidden',!on);
 function note(text,error=false){$('notice').textContent=text||'';$('notice').className=error?'error':'ok'}
 async function table(name){const {data,error}=await db.from(name).select('*');if(error)throw error;return data||[]}
@@ -47,7 +47,12 @@ function totals(sizeId){
  const reserve=records.reduce((a,c)=>a+c.quantidade_reserva_utilizada,0);
  return {accepted,defective,reserve,available:Math.max(0,finalAvailable(sizeId)-accepted-defective)};
 }
-function cutReserve(sizeId){return cortes.filter(c=>c.produto_tamanho_id===sizeId).reduce((a,c)=>a+c.quantidade_reserva,0)}
+function cutReserve(sizeId){return cortes.filter(c=>c.produto_tamanho_id===sizeId).reduce((a,c)=>a+c.quantidade_reserva,0)+
+ cortesReposicao.filter(c=>c.produto_tamanho_id===sizeId).reduce((a,c)=>a+c.quantidade,0)}
+function replacementServed(id){return reposicoesConferidas.filter(a=>a.reposicao_id===id).reduce((n,a)=>n+a.quantidade,0)}
+function pendingReplacement(sizeId){
+ return reposicoes.filter(r=>r.produto_tamanho_id===sizeId).reduce((n,r)=>n+Math.max(0,r.quantidade-replacementServed(r.id)),0);
+}
 async function init(){
  try{
   if(!window.supabase?.createClient)throw Error('Biblioteca Supabase não carregou.');
@@ -69,8 +74,8 @@ async function init(){
 async function load(notify=false){
  const chosen=$('order').value;
  try{
-  [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias,clientes]=await Promise.all(
-   ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais','clientes'].map(table));
+  [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias,clientes,reposicoes,cortesReposicao,reposicoesConferidas]=await Promise.all(
+   ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais','clientes','reposicoes_pecas','cortes_reposicao','reposicoes_conferidas'].map(table));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
   $('order').innerHTML='<option value="">Selecione um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(clientes.find(c=>c.id===p.cliente_id)?.nome||p.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
   $('order').value=pedidos.some(p=>p.id===chosen)?chosen:(pedidos[0]?.id||'');
@@ -89,10 +94,13 @@ function render(){
  $('sold').textContent=sold;$('accepted').textContent=accepted;
  $('pending').textContent=Math.max(0,sold-accepted);
  $('defective').textContent=defective;$('used').textContent=used;
- const ready=!!order&&order.status==='em_producao'&&rowsCount>0&&accepted===sold;
+ const openReplacements=reposicoes.filter(r=>tamanhos.some(t=>t.id===r.produto_tamanho_id&&ps.some(prod=>prod.id===t.produto_id)))
+  .reduce((n,r)=>n+Math.max(0,r.quantidade-replacementServed(r.id)),0);
+ const ready=!!order&&order.status==='em_producao'&&rowsCount>0&&accepted===sold&&openReplacements===0;
  $('finish').disabled=!canWrite||!ready;
  $('finish').classList.toggle('hidden',order?.status==='pronto');
  $('finishhint').textContent=order?.status==='pronto'?'Pedido pronto! Todas as quantidades vendidas passaram pela conferência final.':
+  openReplacements>0?'Há '+openReplacements+' peça(s) de reposição aguardando conferência final. Confirme o uso da substituta ao conferir o produto.':
   ready?'Todas as quantidades vendidas foram aprovadas. Você pode concluir o pedido.':
   'A conclusão fica disponível quando todas as peças vendidas de todos os tamanhos estiverem aprovadas na conferência.';
  $('products').innerHTML=ps.map(p=>{
@@ -105,6 +113,8 @@ function render(){
   const rejectedCount=rejectedReturns.reduce((n,r)=>n+r.quantidade_recebida-r.quantidade_aprovada,0);
   const totalCutReserve=ss.reduce((n,t)=>n+cutReserve(t.id),0);
   const usedReserve=ss.reduce((n,t)=>n+totals(t.id).reserve,0);
+  const pendingRep=ss.reduce((n,t)=>n+pendingReplacement(t.id),0);
+  const cutReplacement=cortesReposicao.filter(c=>ss.some(t=>t.id===c.produto_tamanho_id)).reduce((n,c)=>n+c.quantidade,0);
   const list=ss.map(t=>{
    const a=totals(t.id);const missing=Math.max(0,t.quantidade_vendida-a.accepted);
    return '<div class="item"><strong>'+esc(t.tamanho)+'</strong> · Vendidas: '+t.quantidade_vendida+
@@ -114,8 +124,8 @@ function render(){
   return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+'</h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
    '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+
    ' · Rejeitadas nos processos: '+rejectedCount+
-   ' · Reservas cortadas: '+totalCutReserve+
-   ' · Reservas usadas: '+usedReserve+
+   ' · Reservas disponíveis no corte (incluindo novos cortes): '+totalCutReserve+
+   ' · Novos cortes de reposição: '+cutReplacement+' · Reposições pendentes: '+pendingRep+' · Reservas usadas: '+usedReserve+
    ' · Reservas não utilizadas: '+Math.max(0,totalCutReserve-usedReserve)+'</p>'+
    (rejectedCount?'<details><summary>Ver motivos de rejeição ('+rejectedReturns.length+')</summary>'+
     rejectedReturns.map(r=>'<p class="muted">'+(r.quantidade_recebida-r.quantidade_aprovada)+' peça(s): '+esc(r.observacoes||'Sem descrição em registro antigo')+'</p>').join('')+'</details>':'')+list+
@@ -140,13 +150,14 @@ function openCheck(id){
   const st=totals(t.id),pending=Math.max(0,t.quantidade_vendida-st.accepted);
   const recommended=Math.min(pending,st.available);
   const reserveFree=Math.max(0,cutReserve(t.id)-st.reserve);
+  const recommendedReserve=Math.min(reserveFree,recommended,pendingReplacement(t.id));
   pendingTotal+=pending;recommendedTotal+=recommended;readyTotal+=st.available;
   return '<div class="grade-row" data-size="'+esc(t.id)+'"><strong>Tamanho '+esc(t.tamanho)+'</strong>'+
    '<p class="muted">Vendidas: '+t.quantidade_vendida+' · Faltam aprovar: '+pending+' · Peças disponíveis: '+st.available+
    ' · Reservas ainda não usadas: '+reserveFree+'</p><div class="grade-inputs">'+
    '<label>Aprovar<input class="goodqty" type="number" min="0" max="'+Math.min(pending,st.available)+'" value="'+recommended+'" required></label>'+
    '<label>Defeituosas<input class="badqty" type="number" min="0" max="'+st.available+'" value="0" required></label>'+
-   '<label>Reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="0" required></label>'+
+   '<label>Substituição / reserva usada<input class="reserveqty" type="number" min="0" max="'+Math.min(reserveFree,recommended)+'" value="'+recommendedReserve+'" required></label>'+
    '</div></div>';
  }).join('');
  const missing=Math.max(0,pendingTotal-recommendedTotal);
