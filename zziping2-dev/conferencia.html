@@ -19,9 +19,9 @@
 <form id="checkform"><div id="checksummary" class="note"></div>
 <details id="checkdetails"><summary><b>Ajustar por tamanho (defeitos, reservas ou aprovação parcial)</b></summary>
 <p class="muted">Abra esta seção somente se encontrou peças com defeito ou precisa ajustar o resultado. Caso contrário, mantenha os valores automáticos.</p><div id="checkrows"></div>
-<label>Observações sobre conferência/defeitos<input name="observacoes" maxlength="500" placeholder="Ex.: peça com defeito, reserva utilizada"></label></details>
+<label>Descrição dos defeitos / observações<input name="observacoes" maxlength="500" placeholder="Ex.: peça com defeito, reserva utilizada"></label></details>
 <div class="actions" style="margin-top:15px"><button id="savecheck" type="submit">Aprovar peças disponíveis</button><button id="cancelcheck" type="button" class="secondary">Cancelar</button></div></form></dialog>
-<p class="foot">ZZIPING 2.0 — Desenvolvimento isolado da versão 1.0. Registros de conferência não podem ser apagados pelo painel. Reprocessamento de defeitos será desenvolvido em etapa própria.</p>
+<p class="foot">ZZIPING 2.0 — Desenvolvimento isolado da versão 1.0. Registros de conferência e defeitos permanecem no histórico. Reservas somente são contabilizadas como usadas quando identificadas na conferência; peças rejeitadas não substituem automaticamente peças vendidas.</p>
 </main><script>
 'use strict';
 const SB_URL='https://clgsozqaahxiwunvrkra.supabase.co';
@@ -99,6 +99,12 @@ function render(){
   const ss=tamanhos.filter(t=>t.produto_id===p.id);
   const sum=ss.reduce((a,t)=>a+totals(t.id).accepted,0);
   const soldP=ss.reduce((a,t)=>a+t.quantidade_vendida,0);
+  const sizeIds=new Set(ss.map(t=>t.id));
+  const movIds=new Set(movimentos.filter(m=>sizeIds.has(m.produto_tamanho_id)).map(m=>m.id));
+  const rejectedReturns=retornos.filter(r=>movIds.has(r.movimentacao_id)&&r.quantidade_recebida>r.quantidade_aprovada);
+  const rejectedCount=rejectedReturns.reduce((n,r)=>n+r.quantidade_recebida-r.quantidade_aprovada,0);
+  const totalCutReserve=ss.reduce((n,t)=>n+cutReserve(t.id),0);
+  const usedReserve=ss.reduce((n,t)=>n+totals(t.id).reserve,0);
   const list=ss.map(t=>{
    const a=totals(t.id);const missing=Math.max(0,t.quantidade_vendida-a.accepted);
    return '<div class="item"><strong>'+esc(t.tamanho)+'</strong> · Vendidas: '+t.quantidade_vendida+
@@ -106,7 +112,13 @@ function render(){
    ' · Pendentes: '+missing+' · Defeitos: '+a.defective+' · Reservas usadas: '+a.reserve+'</div>';
   }).join('');
   return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+'</h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
-   '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+'</p>'+list+
+   '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+
+   ' · Rejeitadas nos processos: '+rejectedCount+
+   ' · Reservas cortadas: '+totalCutReserve+
+   ' · Reservas usadas: '+usedReserve+
+   ' · Reservas não utilizadas: '+Math.max(0,totalCutReserve-usedReserve)+'</p>'+
+   (rejectedCount?'<details><summary>Ver motivos de rejeição ('+rejectedReturns.length+')</summary>'+
+    rejectedReturns.map(r=>'<p class="muted">'+(r.quantidade_recebida-r.quantidade_aprovada)+' peça(s): '+esc(r.observacoes||'Sem descrição em registro antigo')+'</p>').join('')+'</details>':'')+list+
    (canWrite&&order?.status==='em_producao'&&sum<soldP?
      '<button type="button" class="secondary" data-check="'+esc(p.id)+'">'+
      (ss.some(t=>totals(t.id).available>0)?'Aprovar peças disponíveis':'Aguardando retorno da última etapa')+'</button>':'')+'</div>';
@@ -183,6 +195,8 @@ $('checkform').onsubmit=async e=>{
    return {tamanho_id:t.id,aprovadas,defeituosas,reservas_utilizadas:reservas};
   });
   if(!itens.some(x=>x.aprovadas+x.defeituosas>0))throw Error('Ainda não existem novas peças disponíveis para conferir.');
+  if(itens.some(x=>x.defeituosas>0)&&form.elements.observacoes.value.trim().length<5)
+   throw Error('Descreva o defeito encontrado na conferência (mínimo 5 caracteres).');
   const {data,error}=await db.rpc('zz2_registrar_conferencia_lote',{p_produto_id:selectedProduct,p_itens:itens,p_observacoes:form.elements.observacoes.value.trim()||null});
   if(error)throw error;
   $('checkdialog').close();await load();note('Conferência registrada: '+data+' peça(s) aprovada(s).');
