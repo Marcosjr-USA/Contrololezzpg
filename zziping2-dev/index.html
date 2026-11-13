@@ -11,7 +11,7 @@
 <section id="page-equipe" class="card page hidden"><h2>Equipe e permissões</h2><p class="muted">Somente administradores podem ativar contas ou ajustar permissões. Novos usuários devem se cadastrar primeiro pela tela de acesso.</p><div id="listaequipe"></div></section>
 <section id="page-auditoria" class="card page hidden"><h2>Auditoria de cadastros</h2><p class="muted">Registros técnicos das modificações mais recentes.</p><div id="listaauditoria"></div></section></div>
 <dialog id="editor" style="max-width:620px;width:calc(100% - 20px);border:1px solid #ddd;border-radius:14px;padding:18px"><div class="top"><h2 id="edtitle">Cadastro</h2><button class="secondary" type="button" id="closeeditor">Fechar</button></div><form id="editorform"><div id="fields"></div><div class="actions"><button type="submit" id="savebutton">Salvar</button><button type="button" class="secondary" id="canceleditor">Cancelar</button></div></form></dialog>
-<div class="foot">ZZIPING 2.0 • Ambiente de desenvolvimento separado • Operações registradas em auditoria • Sem exclusão definitiva no Módulo 1</div></main>
+<div class="foot">ZZIPING 2.0 • Ambiente de desenvolvimento separado • Operações registradas em auditoria • Exclusão de tipos sem uso; desativação quando houver histórico</div></main>
 <script>
 // Cadastro independente do restante do painel para evitar envio silencioso da página.
 async function zz2Entrar(){
@@ -86,7 +86,26 @@ function render(){ $('countclientes').textContent=permitted('clientes_visualizar
 function row(title,detail,button){return '<div class="list-row"><div><b>'+esc(title)+'</b><small>'+esc(detail)+'</small></div>'+(button||'')+'</div>'}
 function renderClientes(){const q=($('buscaclientes').value||'').toLowerCase();$('newcliente').classList.toggle('hidden',!permitted('clientes_editar'));$('listaclientes').innerHTML=cache.clientes.filter(v=>v.nome.toLowerCase().includes(q)).map(v=>row(v.nome,[v.telefone,v.email,v.ativo?'Ativo':'Inativo'].filter(Boolean).join(' · '),permitted('clientes_editar')?'<button class="secondary" data-edit="clientes" data-id="'+esc(v.id)+'">Editar</button>':'' )).join('')||'<p class="muted">Nenhum cliente encontrado.</p>'}
 function renderFaccoes(){const q=($('buscafaccoes').value||'').toLowerCase();$('newfaccao').classList.toggle('hidden',!permitted('faccoes_editar'));$('listafaccoes').innerHTML=cache.faccoes.filter(v=>v.nome.toLowerCase().includes(q)).map(v=>row(v.nome,[v.telefone,v.ativo?'Ativa':'Inativa'].filter(Boolean).join(' · '),permitted('faccoes_editar')?'<button class="secondary" data-edit="faccoes" data-id="'+esc(v.id)+'">Editar</button>':'' )).join('')||'<p class="muted">Nenhuma facção encontrada.</p>'}
-function renderTipos(){$('newtipo').classList.toggle('hidden',profile?.papel!=='administrador');$('listatipos').innerHTML=cache.tipos_servico.map(v=>row(v.nome,v.ativo?'Ativo':'Inativo',profile?.papel==='administrador'?'<button class="secondary" data-edit="tipos_servico" data-id="'+esc(v.id)+'">Editar</button>':'' )).join('')||'<p class="muted">Nenhum tipo cadastrado.</p>'}
+function renderTipos(){
+ $('newtipo').classList.toggle('hidden',profile?.papel!=='administrador');
+ $('listatipos').innerHTML=cache.tipos_servico.map(v=>row(v.nome,v.ativo?'Ativo':'Inativo',
+  profile?.papel==='administrador'?'<div class="actions"><button class="secondary" data-edit="tipos_servico" data-id="'+esc(v.id)+'">Editar</button><button class="secondary" data-remove-tipo="'+esc(v.id)+'">Excluir</button></div>':''
+ )).join('')||'<p class="muted">Nenhum tipo cadastrado.</p>';
+}
+async function removerTipo(id){
+ if(profile?.papel!=='administrador')return;
+ const tipo=cache.tipos_servico.find(t=>t.id===id);if(!tipo)return;
+ if(!confirm('Deseja remover o tipo de serviço "'+tipo.nome+'"?\\n\\nSe não tiver sido utilizado, será excluído. Se já possuir vínculos com produção ou financeiro, será apenas desativado para preservar os registros.'))return;
+ try{
+  const {data,error}=await db.rpc('zz2_excluir_tipo_servico',{p_tipo_id:id});
+  if(error)throw error;
+  await load();
+  inform(data==='excluido'?'Tipo de serviço excluído com sucesso.':'Tipo de serviço desativado. Os históricos de produção e financeiro foram preservados.');
+ }catch(err){fail(err)}
+}
+$('listatipos').addEventListener('click',e=>{
+ const b=e.target.closest('[data-remove-tipo]');if(b)removerTipo(b.dataset.removeTipo);
+});
 function renderEquipe(){$('listaequipe').innerHTML=cache.usuarios.map(u=>{const p=cache.permissoes_usuario.find(x=>x.usuario_id===u.id);return '<div class="list-row"><div><b>'+esc(u.nome)+'</b><small>'+esc(u.email)+' · '+esc(u.papel)+' · '+(u.ativo?'Ativo':'Aguardando aprovação/bloqueado')+'</small><small>Clientes: '+(p?.clientes_editar?'editar':'leitura')+' • Facções: '+(p?.faccoes_editar?'editar':'leitura')+'</small></div><button class="secondary" data-edit="usuarios" data-id="'+esc(u.id)+'">Gerenciar</button></div>'}).join('')||'<p class="muted">Nenhuma conta cadastrada.</p>'}
 function renderAuditoria(){$('listaauditoria').innerHTML=cache.auditoria_cadastros.slice(0,80).map(a=>row(a.tabela+' · '+a.operacao,new Date(a.ocorrido_em).toLocaleString('pt-BR')+' • '+a.registro_id,'')).join('')||'<p class="muted">Sem registros.</p>'}
 const defs={clientes:[['nome','Nome*','text'],['telefone','Telefone','text'],['email','E-mail','email'],['cpf_cnpj','CPF/CNPJ','text'],['endereco','Endereço','text'],['observacoes','Observações','textarea'],['ativo','Ativo','checkbox']],faccoes:[['nome','Nome*','text'],['cpf_cnpj','CPF/CNPJ','text'],['telefone','Telefone','text'],['endereco','Endereço','text'],['chave_pix','Chave Pix','text'],['banco','Banco (opcional)','text'],['agencia','Agência (opcional)','text'],['conta','Conta (opcional)','text'],['observacoes','Observações','textarea'],['ativo','Ativo','checkbox']],tipos_servico:[['nome','Nome*','text'],['ativo','Ativo','checkbox']],usuarios:[['nome','Nome','text'],['papel','Perfil','role'],['ativo','Acesso ativo','checkbox'],['clientes_visualizar','Visualizar clientes','checkbox'],['clientes_editar','Editar clientes','checkbox'],['faccoes_visualizar','Visualizar facções','checkbox'],['faccoes_editar','Editar facções','checkbox'],['pedidos_visualizar','Visualizar pedidos','checkbox'],['pedidos_editar','Criar e editar pedidos','checkbox'],['producao_visualizar','Visualizar produção','checkbox'],['producao_operar','Operar produção','checkbox'],['conferencia_visualizar','Consultar conferência','checkbox'],['conferencia_operar','Conferir e finalizar pedidos','checkbox'],['financeiro_visualizar','Consultar financeiro','checkbox'],['financeiro_operar','Gerenciar valores, fechamentos e pagamentos','checkbox']]};
