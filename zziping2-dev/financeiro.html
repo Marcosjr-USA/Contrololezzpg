@@ -10,17 +10,18 @@
 <section id="blocked" class="card hidden"><h2>Acesso ao financeiro</h2><p id="blockedreason">Faça login com usuário autorizado.</p><a class="button" href="index.html">Abrir login</a></section>
 <section id="work" class="hidden">
 <div class="card"><h2>Facção / prestador</h2><label>Selecione a facção<select id="faccao"></select></label><div class="metrics"><div class="metric"><span>Peças aprovadas sem fechamento</span><strong id="pendingpieces">0</strong></div><div class="metric"><span>Valor pendente já precificado</span><strong id="pendingvalue">R$ 0,00</strong></div><div class="metric"><span>Saldo dos fechamentos</span><strong id="balance">R$ 0,00</strong></div></div><p id="missingprices" class="muted"></p></div>
-<div class="card"><div class="top"><h2>Valores por serviço</h2><button id="newprice">Definir / alterar valor</button></div><p class="muted">Cada facção pode ter um preço diferente por operação. Os valores registrados em fechamentos antigos permanecem preservados.</p><div id="prices"></div></div>
-<div class="card"><div class="top"><h2>Fechamento da produção</h2><button id="newclose">Criar fechamento</button></div>
-<p class="muted">Selecione o período e registre somente as devoluções aprovadas ainda não incluídas em outro fechamento. Você poderá pagar integralmente ou em parcelas.</p>
+<div class="card"><div class="top"><h2>Serviços dos pedidos · Definir custos</h2></div><p class="muted">Os processos e as peças vêm da produção. Clique no produto para conferir os custos da facção; somente preços ausentes precisam ser preenchidos.</p><div id="productcosts"></div></div>
+<div class="card"><details><summary>Configuração de preços por serviço (opcional)</summary><div class="top"><h2>Valores por serviço</h2><button id="newprice">Definir / alterar valor</button></div><p class="muted">Cada facção pode ter um preço diferente por operação. Os valores registrados em fechamentos antigos permanecem preservados.</p><div id="prices"></div></details></div>
+<div class="card"><div class="top"><h2>Fechamento mensal da facção</h2><button id="newclose">Fechar mês</button></div>
+<p class="muted">A produção aprovada é acumulada automaticamente durante o mês. No fechamento, confirme o período e depois registre os pagamentos. O mesmo serviço não entra em dois fechamentos.</p>
 <div id="closings"></div></div>
 </section>
-<dialog id="pricedialog"><div class="top"><h2>Valor de serviço</h2><button type="button" class="secondary" data-close="pricedialog">Fechar</button></div>
+<dialog id="costdialog"><div class="top"><h2 id="costtitle">Custos do produto</h2><button type="button" class="secondary" data-close="costdialog">Fechar</button></div><p class="muted">Processos e quantidades preenchidos automaticamente pela produção. Os serviços internos aparecem somente para consulta; este fechamento paga exclusivamente facções externas.</p><div id="costlines"></div><div class="buttons"><button id="savecosts" type="button">Salvar preços informados</button></div></dialog><dialog id="pricedialog"><div class="top"><h2>Valor de serviço</h2><button type="button" class="secondary" data-close="pricedialog">Fechar</button></div>
 <form id="priceform"><label>Operação / serviço<select name="tipo_servico_id" id="price_type" required></select></label><label>Valor por peça (R$)<input name="valor_unitario" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" required placeholder="Ex.: 2,50"></label><div class="buttons"><button id="saveprice">Salvar valor</button></div></form></dialog>
 <dialog id="closedialog"><div class="top"><h2>Criar fechamento</h2><button type="button" class="secondary" data-close="closedialog">Fechar</button></div>
-<form id="closeform"><label>Tipo de período<select name="periodo_tipo"><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="mensal">Mensal</option><option value="personalizado">Personalizado</option></select></label>
+<form id="closeform"><label>Mês de referência<input type="month" id="closemonth" required></label><p class="muted">Padrão: último mês completo. Para fechamento antecipado, selecione o mês atual e confira os dias.</p><details><summary>Personalizar período (opcional)</summary><label>Tipo de período<select name="periodo_tipo"><option value="mensal">Mensal</option><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="personalizado">Personalizado</option></select></label>
 <div class="grid"><label>De<input type="date" name="inicio" required></label><label>Até<input type="date" name="fim" required></label></div>
-<label>Observações (opcional)<textarea name="observacoes" rows="2"></textarea></label><div id="closepreview" class="preview">Escolha o período para ver a prévia.</div><div class="buttons"><button id="saveclose">Confirmar fechamento</button></div></form></dialog>
+</details><label>Observações (opcional)<textarea name="observacoes" rows="2"></textarea></label><div id="closepreview" class="preview">Escolha o período para ver a prévia.</div><div class="buttons"><button id="saveclose">Confirmar fechamento</button></div></form></dialog>
 <dialog id="paydialog"><div class="top"><h2 id="paytitle">Registrar pagamento</h2><button type="button" class="secondary" data-close="paydialog">Fechar</button></div>
 <p id="payinfo" class="preview"></p><form id="payform">
 <div class="grid"><label>Valor pago (R$)<input name="valor" type="number" min="0.01" step="0.01" required></label><label>Data do pagamento<input name="pago_em" type="date" required></label></div>
@@ -36,7 +37,7 @@ const $=x=>document.getElementById(x),esc=v=>String(v??'').replace(/[&<>"']/g,c=
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const displayDate=v=>v?v.split('-').reverse().join('/'):'—';
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
-let db,user,profile,perms,write=false;let faccoes=[],tipos=[],precos=[],retornos=[],movimentos=[],processos=[],fechamentos=[],itens=[],pagamentos=[];
+let db,user,profile,perms,write=false;let faccoes=[],tipos=[],precos=[],retornos=[],movimentos=[],processos=[],fechamentos=[],itens=[],pagamentos=[],pedidos=[],produtos=[],tamanhos=[];let selectedCostProduct=null;
 let selectedClosing=null;
 function msg(s,error=false){$('notice').textContent=s||'';$('notice').className=error?'error':'ok'}
 function visible(k,on){$(k).classList.toggle('hidden',!on)}
@@ -66,8 +67,8 @@ async function init(){
 async function load(showMessage=false){
  const selected=$('faccao').value;
  try{
-  [faccoes,tipos,precos,retornos,movimentos,processos,fechamentos,itens,pagamentos]=await Promise.all(
-   ['faccoes','tipos_servico','valores_faccoes','retornos_producao','movimentacoes_producao','produto_processos','fechamentos_faccoes','fechamento_itens','pagamentos_faccoes'].map(fetchTable));
+  [faccoes,tipos,precos,retornos,movimentos,processos,fechamentos,itens,pagamentos,pedidos,produtos,tamanhos]=await Promise.all(
+   ['faccoes','tipos_servico','valores_faccoes','retornos_producao','movimentacoes_producao','produto_processos','fechamentos_faccoes','fechamento_itens','pagamentos_faccoes','pedidos','pedido_produtos','produto_tamanhos'].map(fetchTable));
   faccoes.sort((a,b)=>a.nome.localeCompare(b.nome));fechamentos.sort((a,b)=>b.numero-a.numero);
   $('faccao').innerHTML=faccoes.map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
   $('faccao').value=faccoes.some(f=>f.id===selected)?selected:(faccoes[0]?.id||'');
@@ -87,8 +88,80 @@ function pendingRows(){
     price:price?Number(price.valor_unitario):null};
  }).filter(Boolean);
 }
+function completedExternalRows(produtoId){
+ const fac=activeFac();if(!fac)return [];
+ return processos.filter(x=>x.produto_id===produtoId&&x.origem==='facção').map(step=>{
+  const movs=movimentos.filter(m=>m.processo_id===step.id&&m.faccao_id===fac.id);
+  const qty=movs.reduce((n,m)=>n+retornos.filter(r=>r.movimentacao_id===m.id).reduce((a,r)=>a+Number(r.quantidade_aprovada),0),0);
+  const price=precos.find(p=>p.faccao_id===fac.id&&p.tipo_servico_id===step.tipo_servico_id&&p.ativo);
+  return {step,qty,price:price?Number(price.valor_unitario):null};
+ }).filter(x=>x.qty>0);
+}
+function renderProductCosts(){
+ const f=activeFac();if(!f){$('productcosts').innerHTML='';return}
+ const related=produtos.map(p=>{
+  const rows=completedExternalRows(p.id);if(!rows.length)return null;
+  const order=pedidos.find(o=>o.id===p.pedido_id);
+  return {p,order,rows};
+ }).filter(Boolean);
+ $('productcosts').innerHTML=related.map(entry=>{
+  const total=entry.rows.reduce((a,r)=>a+(r.price===null?0:r.price*r.qty),0);
+  const missing=entry.rows.filter(r=>r.price===null).length;
+  return '<div class="item top"><div><strong>'+esc(entry.p.descricao)+'</strong><div class="muted">Pedido '+esc(entry.order?.numero_externo||'—')+' · '+entry.rows.map(r=>esc(r.step.nome)+' ('+r.qty+')').join(' · ')+'</div>'+
+   '<div class="muted">'+(missing?missing+' serviço(s) aguardam preço':'Custos precificados')+' · Subtotal conhecido: '+brl(total)+'</div></div>'+
+   '<button type="button" class="secondary" data-cost="'+esc(entry.p.id)+'">Ver custos</button></div>';
+ }).join('')||'<p class="muted">Nenhum serviço externo aprovado desta facção nos pedidos.</p>';
+}
+function defaultMonth(){
+ const now=today().slice(0,7)+'-01',d=new Date(now+'T12:00:00');d.setDate(0);return d.toISOString().slice(0,7);
+}
+function syncMonth(){
+ const month=$('closemonth').value;if(!/^\\d{4}-\\d{2}$/.test(month))return;
+ const start=month+'-01',d=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0,12);
+ const end=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const form=$('closeform');form.elements.inicio.value=start;
+ form.elements.fim.value=end>today()?today():end;
+ form.elements.periodo_tipo.value='mensal';updatePreview();
+}
+function openCosts(id){
+ const entry=produtos.find(x=>x.id===id),fac=activeFac();if(!entry||!fac)return;
+ selectedCostProduct=id;
+ const order=pedidos.find(p=>p.id===entry.pedido_id);
+ $('costtitle').textContent='Custos · '+entry.descricao+' · Pedido '+(order?.numero_externo||'');
+ const external=completedExternalRows(id);
+ const internal=processos.filter(p=>p.produto_id===id&&p.origem!=='facção');
+ const internalHtml=internal.map(x=>'<div class="item"><strong>'+esc(x.nome)+'</strong> · Processo interno (sem pagamento de facção)</div>').join('');
+ $('costlines').innerHTML=external.map(row=>{
+  const t=row.step;
+  return '<div class="item" data-cost-type="'+esc(t.tipo_servico_id||'')+'"><strong>'+esc(t.nome)+'</strong> · '+row.qty+' peças aprovadas'+
+   '<label>Valor por peça (R$)<input class="cost-price" type="number" min="0.01" max="1000000" step="0.01" value="'+(row.price??'')+'" placeholder="Informe apenas se estiver vazio"></label>'+
+   '<p class="muted">Subtotal: '+(row.price===null?'Aguardando preço':brl(row.price*row.qty))+'</p></div>';
+ }).join('')+internalHtml;
+ $('savecosts').disabled=!write;
+ $('costdialog').showModal();
+}
+$('productcosts').onclick=e=>{const b=e.target.closest('[data-cost]');if(b)openCosts(b.dataset.cost)};
+$('savecosts').onclick=async()=>{
+ if(!write)return;const b=$('savecosts');b.disabled=true;
+ try{
+  const inputs=[...$('costlines').querySelectorAll('[data-cost-type]')];
+  if(!inputs.length)throw Error('Não há processo terceirizado neste produto.');
+  const rows=inputs.map(x=>({id:x.dataset.costType,value:Number(x.querySelector('.cost-price').value)}));
+  if(rows.some(x=>!x.id||!Number.isFinite(x.value)||x.value<=0))throw Error('Informe um preço válido para cada serviço externo.');
+  for(const row of rows){
+   const current=precos.find(p=>p.faccao_id===$('faccao').value&&p.tipo_servico_id===row.id&&p.ativo);
+   if(current&&Number(current.valor_unitario)===row.value)continue;
+   const {error}=await db.rpc('zz2_definir_valor_faccao',{
+    p_faccao_id:$('faccao').value,p_tipo_servico_id:row.id,p_valor:row.value});
+   if(error)throw error;
+  }
+  $('costdialog').close();await load();msg('Preços dos serviços salvos. Serão usados nos próximos fechamentos; os fechamentos anteriores não mudam.');
+ }catch(e){msg(e.message,true)}finally{b.disabled=false}
+};
+$('closemonth').onchange=syncMonth;
 function render(){
- const f=activeFac();if(!f){$('prices').innerHTML='Nenhuma facção cadastrada.';$('closings').innerHTML='';return}
+ const f=activeFac();if(!f){$('prices').innerHTML='Nenhuma facção cadastrada.';$('closings').innerHTML='';$('productcosts').innerHTML='';return}
+ renderProductCosts();
  const pricesFor=precos.filter(p=>p.faccao_id===f.id);
  $('prices').innerHTML=pricesFor.map(p=>{
   const t=tipos.find(t=>t.id===p.tipo_servico_id);
@@ -135,10 +208,9 @@ $('priceform').onsubmit=async e=>{
  }catch(err){msg(err.message,true)}finally{btn.disabled=false}
 };
 $('newclose').onclick=()=>{
- if(!activeFac())return;const f=$('closeform');f.reset();f.elements.fim.value=today();
- const d=new Date(today()+'T12:00:00');d.setDate(d.getDate()-6);
- f.elements.inicio.value=d.toISOString().slice(0,10);
- updatePreview();$('closedialog').showModal();
+ if(!activeFac())return;const f=$('closeform');f.reset();
+ $('closemonth').value=defaultMonth();syncMonth();
+ $('closedialog').showModal();
 };
 function updatePreview(){
  const f=$('closeform');const begin=f.elements.inicio.value,end=f.elements.fim.value;
