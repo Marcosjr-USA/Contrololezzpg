@@ -1,0 +1,114 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZZIPING 2.0 • Relatórios</title>
+<style>
+:root{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f3f4f6;color:#242b35}*{box-sizing:border-box}body{margin:0}header{background:#17191d;color:#fff;border-bottom:4px solid #bb1a32;padding:18px 5%}h1{margin:0;font-size:23px}header small{color:#ccd0d6}.shell{max-width:1200px;margin:auto;padding:12px}.card{background:#fff;border:1px solid #e0e4eb;border-radius:12px;padding:16px;margin:12px 0}h2{font-size:19px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.button,button{border:0;border-radius:8px;background:#b71c34;color:#fff;min-height:40px;padding:9px 14px;cursor:pointer;font:inherit;display:inline-flex;align-items:center;text-decoration:none}.secondary{background:#e8ebef!important;color:#242b35!important}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}label{font-size:13px;font-weight:600}input,select{width:100%;background:#fff;border:1px solid #c9cfda;padding:10px;margin:5px 0;min-height:40px;border-radius:8px;font:inherit}.metric{border-radius:10px;padding:12px;background:#f6f0f1;min-width:130px}.metric strong{display:block;font-size:24px}.muted{color:#677381;font-size:13px}.hidden{display:none!important}.error{color:#ba2037}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #e3e7eb;padding:9px;text-align:left;vertical-align:top}th{background:#f4f5f7}tfoot{font-weight:700}.pill{border-radius:18px;padding:4px 7px;font-weight:700;font-size:12px;white-space:nowrap}.late{background:#ffe1e3;color:#9f1827}.progress{background:#fff1d7;color:#975900}.done{background:#dcf3e8;color:#106d42}.waiting{background:#e9edf3;color:#4d5662}.alert{background:#fff2da;border:1px solid #e9ca8c;border-radius:9px;padding:12px;font-size:13px}#notice{white-space:pre-wrap}.foot{font-size:12px;color:#76808a;padding:10px} 
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:19px}.card{padding:11px}}
+@media print{header,.noprint,.foot{display:none!important}body{background:#fff}.shell{max-width:none}.card{border:0;margin:0;padding:8px;break-inside:avoid}table{font-size:11px}.table-wrap{overflow:visible}.metric{background:#fff;border:1px solid #ddd}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
+<header><div class="top"><div><h1>ZZIPING 2.0 • Relatórios e Acompanhamento</h1><small>Módulo 6 — Pedidos, facções, prazos e produção</small></div><b>DESENVOLVIMENTO</b></div></header>
+<main class="shell"><div class="card top noprint"><div class="actions"><a href="index.html" class="button secondary">Início</a><a href="producao.html" class="button secondary">Produção</a><a href="financeiro.html" class="button secondary">Financeiro</a></div><button id="reload" class="secondary">Atualizar</button></div>
+<p class="alert noprint">Relatórios de acompanhamento de produção. As quantidades de retorno exibidas são as peças <b>recebidas/aprovadas</b>, não valores financeiros. Os prazos são comparados com a data atual. Impressão usa os filtros escolhidos.</p>
+<div id="notice" role="status"></div><section id="blocked" class="card hidden"><h2>Acesso restrito</h2><p id="blockedmsg">É necessário estar autenticado.</p><a href="index.html" class="button">Entrar</a></section>
+<div id="work" class="hidden">
+<div class="card noprint"><div class="top"><h2>Filtros</h2><div class="actions"><button id="print" class="secondary">Imprimir relatório</button><button id="csv" class="secondary">Exportar CSV</button></div></div>
+<div class="grid"><label>Facção / responsável<select id="faccao"><option value="">Todas as facções</option></select></label>
+<label>Pedido<select id="pedido"><option value="">Todos os pedidos</option></select></label>
+<label>Envios: de<input id="inicio" type="date"></label><label>Envios: até<input id="fim" type="date"></label></div>
+<label class="noprint"><input style="display:inline-block;width:auto;min-height:0;margin-right:5px" id="onlypending" type="checkbox">Mostrar somente envios com peças aguardando retorno</label>
+</div>
+<div class="card"><div class="top"><h2>Resumo de produção</h2><span id="generated" class="muted"></span></div>
+<div id="summary" class="grid"></div><p id="filterlabel" class="muted"></p></div>
+<div class="card"><h2>Pedidos e conclusão</h2><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Entrega</th><th>Vendidas</th><th>Conferidas</th><th>Pendentes</th></tr></thead><tbody id="orders"></tbody></table></div></div>
+<div class="card"><h2>Produção por facção e processo</h2><p class="muted">Soma dos envios dentro do período filtrado. Peças pendentes e atrasadas são calculadas para esses mesmos envios.</p>
+<div class="table-wrap"><table><thead><tr><th>Facção</th><th>Serviço</th><th>Enviadas</th><th>Recebidas</th><th>Aprovadas</th><th>Pendentes</th><th>Atrasadas</th></tr></thead><tbody id="byfaccao"></tbody></table></div></div>
+<div class="card"><h2>Envios e prazos detalhados</h2><div class="table-wrap"><table><thead><tr><th>Pedido / produto</th><th>Tamanho</th><th>Serviço / facção</th><th>Envio</th><th>Prazo</th><th>Enviadas</th><th>Recebidas</th><th>Aprovadas</th><th>Pendentes</th><th>Situação</th></tr></thead><tbody id="movements"></tbody></table></div></div>
+</div><p class="foot">ZZIPING 2.0 · Ambiente de desenvolvimento isolado da ZZIPING 1.0. Relatórios apenas para consulta: não alteram lançamentos ou pagamentos.</p></main>
+<script>
+'use strict';
+const SB_URL='https://clgsozqaahxiwunvrkra.supabase.co',SB_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let db,orders=[],products=[],sizes=[],steps=[],moves=[],returns=[],faccoes=[],checks=[],clients=[];
+let visible=[];
+const num=n=>Number(n)||0;
+const dateBR=d=>d?String(d).split('-').reverse().join('/'):'—';
+const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const nameFac=id=>id?(faccoes.find(f=>f.id===id)?.nome||'Facção não encontrada'):'Operação interna';
+const getStep=id=>steps.find(x=>x.id===id),getSize=id=>sizes.find(x=>x.id===id),getProd=id=>products.find(x=>x.id===id),getOrder=id=>orders.find(x=>x.id===id);
+const query=name=>db.from(name).select('*').then(({data,error})=>{if(error)throw error;return data||[]});
+const note=(s,err=false)=>{$('notice').textContent=s||'';$('notice').className=err?'error':'muted'};
+async function init(){
+ try{
+  if(!window.supabase?.createClient)throw Error('Falha ao carregar a biblioteca de login.');
+  db=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+  const {data:{session},error}=await db.auth.getSession();if(error)throw error;if(!session){$('blocked').classList.remove('hidden');return}
+  const [user,perm]=await Promise.all([
+    db.from('usuarios').select('*').eq('id',session.user.id).maybeSingle(),
+    db.from('permissoes_usuario').select('*').eq('usuario_id',session.user.id).maybeSingle()
+  ]);
+  if(user.error||perm.error)throw (user.error||perm.error);
+  if(!user.data?.ativo||!(user.data.papel==='administrador'||(perm.data?.producao_visualizar&&perm.data?.pedidos_visualizar))){
+   $('blocked').classList.remove('hidden');$('blockedmsg').textContent='Sua conta precisa de permissão para consultar pedidos e produção.';return;
+  }
+  $('work').classList.remove('hidden');await load();
+ }catch(err){$('blocked').classList.remove('hidden');$('blockedmsg').textContent=err.message;note(err.message,true)}
+}
+async function load(){
+ const fac=$('faccao').value,ped=$('pedido').value;
+ try{
+  [orders,products,sizes,steps,moves,returns,faccoes,checks,clients]=await Promise.all(['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','faccoes','conferencias_finais','clientes'].map(query));
+  $('faccao').innerHTML='<option value="">Todas as facções</option><option value="internal">Operação interna</option>'+faccoes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(f=>'<option value="'+esc(f.id)+'">'+esc(f.nome)+'</option>').join('');
+  $('pedido').innerHTML='<option value="">Todos os pedidos</option>'+orders.slice().sort((a,b)=>b.criado_em.localeCompare(a.criado_em)).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.numero_externo)+'</option>').join('');
+  $('faccao').value=[...$('faccao').options].some(x=>x.value===fac)?fac:'';
+  $('pedido').value=[...$('pedido').options].some(x=>x.value===ped)?ped:'';
+  note('Dados atualizados.');render();
+ }catch(err){note('Não foi possível carregar os dados: '+err.message,true)}
+}
+function movementRows(){
+ const fac=$('faccao').value,ped=$('pedido').value,start=$('inicio').value,end=$('fim').value,pendingOnly=$('onlypending').checked;
+ return moves.map(m=>{
+  const t=getSize(m.produto_tamanho_id),p=getProd(t?.produto_id),o=getOrder(p?.pedido_id),s=getStep(m.processo_id);
+  const receipts=returns.filter(r=>r.movimentacao_id===m.id),received=receipts.reduce((n,r)=>n+num(r.quantidade_recebida),0),approved=receipts.reduce((n,r)=>n+num(r.quantidade_aprovada),0);
+  const pending=Math.max(0,num(m.quantidade_enviada)-received),late=pending>0&&!!m.prazo_previsto&&m.prazo_previsto<today();
+  return {id:m.id,order:o,product:p,size:t,step:s,m,received,approved,pending,late};
+ }).filter(r=>r.order&&r.product&&r.size&&r.step)
+ .filter(r=>(!fac||(fac==='internal'?!r.m.faccao_id:r.m.faccao_id===fac))&&(!ped||r.order.id===ped)&&(!start||r.m.enviado_em>=start)&&(!end||r.m.enviado_em<=end)&&(!pendingOnly||r.pending>0))
+ .sort((a,b)=>Number(b.late)-Number(a.late)||(a.m.prazo_previsto||'9999').localeCompare(b.m.prazo_previsto||'9999')||b.m.enviado_em.localeCompare(a.m.enviado_em));
+}
+const sum=(arr,key)=>arr.reduce((v,x)=>v+num(typeof key==='function'?key(x):x[key]),0);
+function render(){
+ visible=movementRows();
+ const m=visible,sent=sum(m,r=>r.m.quantidade_enviada),received=sum(m,'received'),approved=sum(m,'approved'),pending=sum(m,'pending'),late=sum(m,r=>r.late?r.pending:0);
+ $('summary').innerHTML=[['Envios (registros)',m.length],['Peças enviadas',sent],['Recebidas',received],['Aprovadas no processo',approved],['Pendentes de retorno',pending],['Peças atrasadas',late]].map(([l,n])=>'<div class="metric"><span class="muted">'+esc(l)+'</span><strong>'+n+'</strong></div>').join('');
+ $('generated').textContent='Consultado em '+new Date().toLocaleString('pt-BR');
+ const sel=$('faccao'),ord=$('pedido');$('filterlabel').textContent='Facção: '+sel.options[sel.selectedIndex]?.text+' · Pedido: '+ord.options[ord.selectedIndex]?.text+' · Período de envio: '+dateBR($('inicio').value)+' a '+dateBR($('fim').value);
+ const groups=new Map();
+ for(const r of m){const key=(r.m.faccao_id||'internal')+'|'+r.step.id;
+  if(!groups.has(key))groups.set(key,{fac:nameFac(r.m.faccao_id),service:r.step.nome,sent:0,received:0,approved:0,pending:0,late:0});
+  const g=groups.get(key);g.sent+=num(r.m.quantidade_enviada);g.received+=r.received;g.approved+=r.approved;g.pending+=r.pending;g.late+=r.late?r.pending:0;}
+ $('byfaccao').innerHTML=[...groups.values()].sort((a,b)=>a.fac.localeCompare(b.fac)||a.service.localeCompare(b.service)).map(g=>'<tr><td>'+esc(g.fac)+'</td><td>'+esc(g.service)+'</td><td>'+g.sent+'</td><td>'+g.received+'</td><td>'+g.approved+'</td><td>'+g.pending+'</td><td>'+g.late+'</td></tr>').join('')||'<tr><td colspan="7">Não há envios nos filtros selecionados.</td></tr>';
+ $('movements').innerHTML=m.map(r=>'<tr><td><b>'+esc(r.order.numero_externo)+'</b><br>'+esc(r.product.descricao)+'</td><td>'+esc(r.size.tamanho)+'</td><td>'+esc(r.step.nome)+'<br><span class="muted">'+esc(nameFac(r.m.faccao_id))+'</span></td><td>'+dateBR(r.m.enviado_em)+'</td><td>'+dateBR(r.m.prazo_previsto)+'</td><td>'+r.m.quantidade_enviada+'</td><td>'+r.received+'</td><td>'+r.approved+'</td><td>'+r.pending+'</td><td><span class="pill '+(r.late?'late':r.pending===0?'done':'progress')+'">'+(r.late?'Atrasado':r.pending===0?'Recebido':'Aguardando')+'</span></td></tr>').join('')||'<tr><td colspan="10">Nenhum envio para mostrar.</td></tr>';
+ const orderIds=new Set(m.map(r=>r.order.id));
+ // Sem filtro de movimentos, mostrar todos os pedidos; com filtro de facção/período, listar apenas pedidos com envios correspondentes.
+ const filtered=!!($('faccao').value||$('inicio').value||$('fim').value||$('onlypending').checked);
+ const selected=$('pedido').value;
+ const os=orders.filter(o=>(!selected||o.id===selected)&&(!filtered||orderIds.has(o.id))).sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
+ $('orders').innerHTML=os.map(o=>{
+  const pp=products.filter(p=>p.pedido_id===o.id),ids=new Set(pp.map(p=>p.id)),ss=sizes.filter(t=>ids.has(t.produto_id));
+  const sold=sum(ss,'quantidade_vendida'),conf=sum(checks.filter(c=>ss.some(t=>t.id===c.produto_tamanho_id)),'quantidade_aprovada');
+  const lateOrder=o.status!=='pronto'&&o.prazo_entrega&&o.prazo_entrega<today();
+  return '<tr><td>'+esc(o.numero_externo)+'</td><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'—')+'</td><td><span class="pill '+(o.status==='pronto'?'done':lateOrder?'late':'waiting')+'">'+esc(o.status)+(lateOrder?' · prazo vencido':'')+'</span></td><td>'+dateBR(o.prazo_entrega)+'</td><td>'+sold+'</td><td>'+conf+'</td><td>'+Math.max(0,sold-conf)+'</td></tr>';
+ }).join('')||'<tr><td colspan="7">Nenhum pedido nos filtros.</td></tr>';
+}
+function toCSV(){
+ const rows=[['Pedido','Produto','Tamanho','Serviço','Facção','Data envio','Prazo','Enviadas','Recebidas','Aprovadas','Pendentes','Situação'],
+ ...visible.map(r=>[r.order.numero_externo,r.product.descricao,r.size.tamanho,r.step.nome,nameFac(r.m.faccao_id),r.m.enviado_em,r.m.prazo_previsto||'',r.m.quantidade_enviada,r.received,r.approved,r.pending,r.late?'Atrasado':r.pending?'Aguardando':'Recebido'])];
+ const quote=x=>'"'+String(x??'').replace(/"/g,'""')+'"';
+ const csv='\ufeff'+rows.map(row=>row.map(quote).join(';')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='zziping2-producao-'+today()+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('reload').onclick=load;
+for(const id of ['faccao','pedido','inicio','fim','onlypending'])$(id).addEventListener('change',render);
+$('print').onclick=()=>window.print();
+$('csv').onclick=toCSV;
+init();
+</script></body></html>
