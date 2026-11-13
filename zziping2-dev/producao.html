@@ -60,7 +60,7 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null,selectedReturnProcess=null,selectedCorrectMovement=null,selectedTransferMovement=null;
-let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[],pausas=[],correcoes=[],transferencias=[];
+let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[],pausas=[],correcoes=[],transferencias=[],clientes=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 function addBusinessDays(iso,days){
  const parts=(iso||'').split('-').map(Number);
@@ -128,11 +128,11 @@ async function init(){
 async function load(keep=true){
  const selected=$('order').value;
  try{
-  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes,pausas,correcoes,transferencias]=await Promise.all([
-   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes','pausas_producao','correcoes_movimentacao','transferencias_faccoes'
+  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes,pausas,correcoes,transferencias,clientes]=await Promise.all([
+   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes','pausas_producao','correcoes_movimentacao','transferencias_faccoes','clientes'
   ].map(fetchTable));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
-  $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.numero_externo)+' · '+esc(p.status)+(p.pausado_em?' (PAUSADO)':'')+'</option>').join('');
+  $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc((clientes.find(c=>c.id===p.cliente_id)?.nome||p.cliente_nome_livre||'Cliente não informado'))+' · Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+(p.pausado_em?' (PAUSADO)':'')+'</option>').join('');
   $('order').value=pedidos.some(p=>p.id===selected)?selected:(pedidos[0]?.id||'');
   render();
   if(!keep)message('Produção atualizada.');
@@ -162,7 +162,7 @@ function stageStatus(stage,sizes){
 }
 function render(){
  const p=pedidos.find(x=>x.id===$('order').value);
- $('ordermeta').innerHTML=p?'<div class="line"><b>Pedido:</b> '+esc(p.numero_externo)+' · '+esc(p.prioridade)+' · Entrega '+esc(p.prazo_entrega)+' · <b>'+esc(p.status)+'</b></div>':'<p class="muted">Nenhum pedido encontrado.</p>';
+ $('ordermeta').innerHTML=p?'<div class="line"><b>'+esc(clientes.find(c=>c.id===p.cliente_id)?.nome||p.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(p.numero_externo)+'</b> · '+esc(p.prioridade)+' · Entrega '+esc(p.prazo_entrega)+' · <b>'+esc(p.status)+'</b></div>':'<p class="muted">Nenhum pedido encontrado.</p>';
  $('release').disabled=!canEdit||!p||p.status!=='rascunho';
  const isPaused=!!p?.pausado_em;
  $('pausebtn').classList.toggle('hidden',!canEdit||!p||p.status!=='em_producao'||isPaused);
