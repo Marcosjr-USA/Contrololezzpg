@@ -95,7 +95,7 @@ function render(){
   const pp=products.filter(p=>p.pedido_id===o.id),ids=new Set(pp.map(p=>p.id)),ss=sizes.filter(t=>ids.has(t.produto_id));
   const sold=sum(ss,'quantidade_vendida'),conf=sum(checks.filter(c=>ss.some(t=>t.id===c.produto_tamanho_id)),'quantidade_aprovada');
   const lateOrder=o.status!=='pronto'&&o.prazo_entrega&&o.prazo_entrega<today();
-  return '<tr><td>'+esc(o.numero_externo)+'</td><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'—')+'</td><td><span class="pill '+(o.status==='pronto'?'done':lateOrder?'late':'waiting')+'">'+esc(o.status)+(lateOrder?' · prazo vencido':'')+'</span></td><td>'+dateBR(o.prazo_entrega)+'</td><td>'+sold+'</td><td>'+conf+'</td><td>'+Math.max(0,sold-conf)+'</td></tr>';
+  return '<tr><td>'+esc(o.numero_externo)+'</td><td>'+esc(clients.find(c=>c.id===o.cliente_id)?.nome||o.cliente_nome_livre||'—')+'</td><td><span class="pill '+(o.status==='pronto'?'done':o.pausado_em?'progress':lateOrder?'late':'waiting')+'">'+esc(o.pausado_em?'PAUSADO':o.status)+(lateOrder?' · prazo vencido':'')+'</span></td><td>'+dateBR(o.prazo_entrega)+'</td><td>'+sold+'</td><td>'+conf+'</td><td>'+Math.max(0,sold-conf)+'</td></tr>';
  }).join('')||'<tr><td colspan="7">Nenhum pedido nos filtros.</td></tr>';
 }
 function toCSV(){
