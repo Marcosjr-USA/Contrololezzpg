@@ -20,10 +20,10 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <section id="blocked" class="card hidden"><h2>Sem acesso</h2><p id="blockedmsg">Faça login na ZZIPING 2.0 para acessar a produção.</p><a href="index.html" class="button">Entrar</a></section>
 <section id="work" class="hidden"><div class="card"><h2>Pedidos de produção</h2><label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div><div class="actions"><button id="release">Liberar pedido para corte</button><button id="pausebtn" class="secondary hidden" type="button">Pausar produção</button><button id="resumebtn" class="hidden" type="button">Retomar produção</button></div><div id="pauseinfo" class="hidden warn"></div><div id="pausehistory"></div></div>
 <div class="card"><h2>Produtos e andamento</h2><div id="products"></div></div>
-<div class="card"><h2>Histórico de movimentações</h2><p class="muted">Caso algum envio tenha sido lançado errado, use Corrigir envio. O motivo é obrigatório e as alterações ficam no histórico.</p><div id="history"></div></div><div class="card"><h2>Histórico de correções</h2><div id="correctionhistory"></div></div>
+<div class="card"><h2>Movimentações agrupadas por produto</h2><p class="muted">Selecione um produto para transferir peças e escolha o tamanho na janela. Para consultar ou corrigir envios individuais, abra os detalhes do produto.</p><div id="history"></div></div><div class="card"><h2>Histórico de correções</h2><div id="correctionhistory"></div></div>
 <div class="card"><h2>Transferências entre facções</h2><p class="muted">Transferências de peças pendentes sem registrar devolução ou gerar pagamento. A origem e o destino ficam preservados.</p><div id="transferhistory"></div></div></section>
 <dialog id="transferdialog"><h2>Transferir peças entre facções</h2><p id="transferhint" class="muted"></p>
-<form id="transferform"><label>Nova facção / prestador<select id="transferdest" required></select></label>
+<form id="transferform"><label>Tamanho e processo de origem<select id="transfermovement" required></select></label><label>Nova facção / prestador<select id="transferdest" required></select></label>
 <div class="grid"><label>Peças a transferir<input type="number" name="quantidade" min="1" step="1" required></label><label>Data da transferência<input type="date" name="data_transferencia" required></label></div>
 <label>Novo prazo previsto<input type="date" name="prazo_destino"></label>
 <label>Motivo da transferência<textarea name="motivo" rows="3" required minlength="5" maxlength="1000" placeholder="Ex.: prestador sem disponibilidade para concluir o serviço"></textarea></label>
@@ -211,15 +211,30 @@ function render(){
   return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+'</div><div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
  }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
  const movementList=movimentos.filter(m=>ps.some(prod=>relatedSizes(prod.id).some(t=>t.id===m.produto_tamanho_id)))
- .sort((a,b)=>b.registrado_em.localeCompare(a.registrado_em));
- $('history').innerHTML=movementList.map(m=>{
-  const t=grades.find(x=>x.id===m.produto_tamanho_id),prod=findProduct(t?.produto_id),step=etapas.find(x=>x.id===m.processo_id),f=faccoes.find(x=>x.id===m.faccao_id);
-  const remain=m.quantidade_enviada-received(m.id);
-  return '<div class="mov"><div class="top"><b>'+esc(prod?.descricao)+' · '+esc(t?.tamanho)+' · '+esc(step?.nome)+'</b><span class="pill">'+m.quantidade_enviada+' enviadas</span></div><div class="line">'+esc(f?.nome||'Operação interna')+' · Envio: '+esc(m.enviado_em)+' · Recebidas: '+received(m.id)+' · Aprovadas: '+approved(m.id)+'</div><small>Saldo aguardando retorno: '+remain+(m.prazo_previsto?' · Prazo: '+esc(m.prazo_previsto):'')+'</small>'+(remain>0&&canEdit?'<button class="secondary" data-returnprocess="'+esc(m.processo_id)+'">Devolver esta etapa</button>':'')+
- (canEdit&&p?.status==='em_producao'&&!p?.pausado_em&&!m.transferido_integralmente?'<button type="button" class="secondary" data-correct="'+esc(m.id)+'">Corrigir envio</button>':'')+
- (remain>0&&canEdit&&p?.status==='em_producao'&&!p?.pausado_em&&step?.origem==='facção'?
- '<button type="button" class="secondary" data-transfer="'+esc(m.id)+'">Transferir ('+remain+')</button>':'')+
- (m.transferido_integralmente?'<span class="muted"> · Peças pendentes integralmente transferidas</span>':'')+'</div>';
+  .sort((a,b)=>b.registrado_em.localeCompare(a.registrado_em));
+ $('history').innerHTML=ps.map(prod=>{
+  const ms=movementList.filter(m=>grades.find(t=>t.id===m.produto_tamanho_id)?.produto_id===prod.id);
+  if(!ms.length)return '';
+  const pending=ms.reduce((n,m)=>n+Math.max(0,m.quantidade_enviada-received(m.id)),0);
+  const transferable=transferCandidates(prod.id);
+  const sizes=[...new Set(transferable.map(m=>grades.find(t=>t.id===m.produto_tamanho_id)?.tamanho).filter(Boolean))];
+  const details=ms.map(m=>{
+   const t=grades.find(x=>x.id===m.produto_tamanho_id),step=etapas.find(x=>x.id===m.processo_id),f=faccoes.find(x=>x.id===m.faccao_id);
+   const remain=m.quantidade_enviada-received(m.id);
+   return '<div class="mov"><div class="top"><b>Tamanho '+esc(t?.tamanho)+' · '+esc(step?.nome)+'</b><span class="pill">'+m.quantidade_enviada+' enviadas</span></div>'+
+    '<div class="line">'+esc(f?.nome||'Operação interna')+' · Envio: '+esc(m.enviado_em)+
+    ' · Recebidas: '+received(m.id)+' · Aprovadas: '+approved(m.id)+'</div>'+
+    '<small>Saldo pendente: '+remain+(m.prazo_previsto?' · Prazo: '+esc(m.prazo_previsto):'')+'</small>'+
+    (remain>0&&canEdit?'<button class="secondary" data-returnprocess="'+esc(m.processo_id)+'">Devolver esta etapa</button>':'')+
+    (canEdit&&p?.status==='em_producao'&&!p?.pausado_em&&!m.transferido_integralmente?'<button type="button" class="secondary" data-correct="'+esc(m.id)+'">Corrigir envio</button>':'')+
+    (m.transferido_integralmente?'<span class="muted"> · Saldo transferido</span>':'')+'</div>';
+  }).join('');
+  return '<div class="item"><div class="top"><div><h3>'+esc(prod.descricao)+'</h3><div class="muted">'+ms.length+
+   ' lançamento(s) · '+pending+' peça(s) aguardando retorno</div></div>'+
+   (transferable.length?'<button type="button" data-transfer-product="'+esc(prod.id)+'">Transferir peças ('+
+    transferable.reduce((n,m)=>n+m.quantidade_enviada-received(m.id),0)+')</button>':'')+'</div>'+
+   (transferable.length?'<p class="muted">Tamanhos disponíveis para transferência: '+esc(sizes.join(', '))+'</p>':'')+
+   '<details><summary style="cursor:pointer;padding:8px 0;font-weight:600">Ver envios por tamanho ('+ms.length+')</summary>'+details+'</details></div>';
  }).join('')||'<p class="muted">Ainda não existem envios para este pedido.</p>';
  const ids=new Set(movementList.map(x=>x.id));
  $('correctionhistory').innerHTML=correcoes.filter(c=>ids.has(c.movimentacao_id))
@@ -290,17 +305,47 @@ $('products').onclick=e=>{
  }
 };
 $('history').onclick=e=>{
- const transfer=e.target.closest('[data-transfer]');if(transfer){openTransfer(transfer.dataset.transfer);return}
+ const transfer=e.target.closest('[data-transfer-product]');if(transfer){openTransferProduct(transfer.dataset.transferProduct);return}
  const correct=e.target.closest('[data-correct]');if(correct){openCorrect(correct.dataset.correct);return}
  const b=e.target.closest('[data-returnprocess]');if(b)openReturnProcess(b.dataset.returnprocess)
 };
+function transferCandidates(productId){
+ const p=pedidos.find(x=>x.id===$('order').value);
+ if(!p||p.status!=='em_producao'||p.pausado_em||!canEdit)return [];
+ return movimentos.filter(m=>{
+  const t=grades.find(x=>x.id===m.produto_tamanho_id),step=etapas.find(x=>x.id===m.processo_id);
+  return t?.produto_id===productId&&step?.origem==='facção'&&m.faccao_id&&m.quantidade_enviada>received(m.id);
+ }).sort((a,b)=>{
+  const ta=grades.find(x=>x.id===a.produto_tamanho_id)?.tamanho||'',tb=grades.find(x=>x.id===b.produto_tamanho_id)?.tamanho||'';
+  return ta.localeCompare(tb,'pt-BR',{numeric:true})||a.enviado_em.localeCompare(b.enviado_em);
+ });
+}
+function openTransferProduct(productId){
+ const product=findProduct(productId),candidates=transferCandidates(productId);
+ if(!product||!candidates.length){message('Este produto não tem peças pendentes em facções externas.',true);return}
+ $('transfermovement').innerHTML=candidates.map(m=>{
+  const t=grades.find(x=>x.id===m.produto_tamanho_id),step=etapas.find(x=>x.id===m.processo_id),
+   fac=faccoes.find(x=>x.id===m.faccao_id);
+  return '<option value="'+esc(m.id)+'">'+esc(t?.tamanho||'—')+' · '+esc(step?.nome||'Processo')+
+   ' · '+esc(fac?.nome||'Facção')+' · '+(m.quantidade_enviada-received(m.id))+' disponível(is)</option>';
+ }).join('');
+ openTransfer(candidates[0].id);
+ $('transfermovement').value=candidates[0].id;
+}
 function openTransfer(id){
  const m=movimentos.find(x=>x.id===id);if(!m)return;
  const t=grades.find(x=>x.id===m.produto_tamanho_id),prod=findProduct(t?.produto_id),stage=etapas.find(x=>x.id===m.processo_id);
  const saldo=m.quantidade_enviada-received(id);
  if(saldo<1){message('Este envio não tem peças pendentes para transferência.',true);return}
  selectedTransferMovement=id;
- const f=$('transferform');f.reset();
+ const f=$('transferform');
+ // O seletor é montado por produto, mas a transferência continua ligada a um envio/tamanho específico.
+ const options=[...$('transfermovement').options];
+ if(!options.some(o=>o.value===id)){
+  $('transfermovement').innerHTML='<option value="'+esc(id)+'">Tamanho '+esc(t?.tamanho||'—')+' · '+esc(stage?.nome||'')+'</option>';
+ }
+ f.reset();
+ $('transfermovement').value=id;
  $('transfernotice').textContent='';
  $('transferdest').innerHTML='<option value="">Escolha o prestador de destino</option>'+
   faccoes.filter(x=>x.ativo&&x.id!==m.faccao_id).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
@@ -316,6 +361,23 @@ function openTransfer(id){
  }else{$('savetransfer').disabled=false}
  $('transferdialog').showModal();
 }
+$('transfermovement').onchange=e=>{
+ const id=e.target.value,m=movimentos.find(x=>x.id===id);
+ if(!m)return;
+ const t=grades.find(x=>x.id===m.produto_tamanho_id),p=findProduct(t?.produto_id),stage=etapas.find(x=>x.id===m.processo_id),
+  qty=m.quantidade_enviada-received(m.id);
+ selectedTransferMovement=id;
+ $('transferhint').textContent=(p?.descricao||'Produto')+' · Tamanho '+(t?.tamanho||'')+' · '+(stage?.nome||'')+
+  ' · Origem: '+(faccoes.find(x=>x.id===m.faccao_id)?.nome||'—')+' · Saldo pendente: '+qty+' peça(s).';
+ const f=$('transferform');
+ f.elements.quantidade.max=String(qty);f.elements.quantidade.value=String(qty);
+ f.elements.data_transferencia.value=today()<m.enviado_em?m.enviado_em:today();
+ f.elements.prazo_destino.value=addBusinessDays(f.elements.data_transferencia.value,stage?.prazo_dias_uteis||0);
+ $('transferdest').innerHTML='<option value="">Escolha o prestador de destino</option>'+
+  faccoes.filter(x=>x.ativo&&x.id!==m.faccao_id).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
+ $('savetransfer').disabled=!faccoes.some(x=>x.ativo&&x.id!==m.faccao_id);
+ $('transfernotice').textContent=$('savetransfer').disabled?'Cadastre uma facção de destino diferente da origem no Módulo 1.':'';
+};
 $('transferform').elements.data_transferencia.onchange=e=>{
  const m=movimentos.find(x=>x.id===selectedTransferMovement),stage=etapas.find(x=>x.id===m?.processo_id);
  $('transferform').elements.prazo_destino.value=addBusinessDays(e.target.value,stage?.prazo_dias_uteis||0);
