@@ -28,7 +28,7 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <label>Tipo de reposição<select id="replacementorigin" name="origem"><option value="reserva">Peça reserva já cortada</option><option value="novo_corte">Novo corte de reposição</option></select></label></div>
 <p id="replacementavailability" class="muted"></p>
 <label>Motivo da reposição<textarea name="motivo" required minlength="5" maxlength="1000" rows="2" placeholder="Ex.: substituir peça com defeito"></textarea></label>
-<p class="muted">A reposição não altera as quantidades vendidas. Uma nova peça cortada seguirá os processos de produção normalmente; o uso efetivo da reserva é confirmado na Conferência Final.</p>
+<p class="muted">A reposição não altera as quantidades vendidas. Caso escolha Novo corte, confirme quando as peças forem realmente cortadas. Depois elas seguem os processos normais e são verificadas na Conferência Final.</p>
 <p id="replacementerror" class="error"></p><div class="actions"><button type="submit" id="savereplacement">Registrar reposição</button><button type="button" id="cancelreplacement" class="secondary">Cancelar</button></div></form></dialog>
 <dialog id="transferdialog"><h2>Transferir peças entre facções</h2><p id="transferhint" class="muted"></p>
 <form id="transferform"><label>Tamanho e processo de origem<select id="transfermovement" required></select></label><label>Nova facção / prestador<select id="transferdest" required></select></label>
@@ -197,8 +197,12 @@ function render(){
   const replacementHistory=replacementRows.map(r=>{
     const t=grades.find(x=>x.id===r.produto_tamanho_id);
     return '<div class="line">Tamanho '+esc(t?.tamanho||'—')+' · '+r.quantidade+' peça(s) · '+
-     esc(r.origem==='novo_corte'?'Novo corte':'Reserva')+' · Finalizadas: '+replacementServed(r.id)+
-     ' · Pendentes: '+Math.max(0,r.quantidade-replacementServed(r.id))+' · '+esc(r.motivo)+'</div>';
+     esc(r.origem==='novo_corte'?'Novo corte':'Reserva')+
+     (r.origem==='novo_corte'?' · '+(cortesReposicao.some(c=>c.reposicao_id===r.id)?'Corte concluído':'Aguardando corte'):'')+
+     ' · Finalizadas: '+replacementServed(r.id)+
+     ' · Pendentes: '+Math.max(0,r.quantidade-replacementServed(r.id))+' · '+esc(r.motivo)+
+     (r.origem==='novo_corte'&&!cortesReposicao.some(c=>c.reposicao_id===r.id)&&canEdit&&!isPaused?
+      ' <button type="button" class="secondary" data-cutreplacement="'+esc(r.id)+'">Concluir corte da reposição</button>':'')+'</div>';
   }).join('');
   const rejectionHistory=rejectedRows.map(r=>{
    const m=movimentos.find(x=>x.id===r.movimentacao_id),t=grades.find(x=>x.id===m?.produto_tamanho_id),
@@ -323,10 +327,11 @@ $('release').onclick=async()=>{
  try{const {error}=await db.rpc('zz2_liberar_pedido',{p_pedido_id:id});if(error)throw error;await load();message('Pedido liberado para produção. O cortador pode concluir o corte.')}catch(e){message(e.message,true)}finally{busy(btn,false,'Liberar pedido para corte')}
 };
 $('products').onclick=e=>{
- const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess],[data-replacement]');
+ const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess],[data-replacement],[data-cutreplacement]');
  if(b?.dataset.cut)openCut(b.dataset.cut);
  if(b?.dataset.send)openSend(b.dataset.send);
  if(b?.dataset.replacement)openReplacement(b.dataset.replacement);
+ if(b?.dataset.cutreplacement)concludeReplacementCut(b.dataset.cutreplacement);
  if(b?.dataset.returnprocess)openReturnProcess(b.dataset.returnprocess);
  if(b?.dataset.blocked){
   const stage=etapas.find(x=>x.id===b.dataset.blocked);
@@ -352,6 +357,17 @@ function transferCandidates(productId){
   const ta=grades.find(x=>x.id===a.produto_tamanho_id)?.tamanho||'',tb=grades.find(x=>x.id===b.produto_tamanho_id)?.tamanho||'';
   return ta.localeCompare(tb,'pt-BR',{numeric:true})||a.enviado_em.localeCompare(b.enviado_em);
  });
+}
+async function concludeReplacementCut(id){
+ const rep=reposicoes.find(x=>x.id===id);
+ if(!rep||!canEdit)return;
+ const size=grades.find(x=>x.id===rep.produto_tamanho_id);
+ if(!confirm('Confirmar corte físico de '+rep.quantidade+' peça(s) de reposição no tamanho '+(size?.tamanho||'')+'?'))return;
+ try{
+  const {error}=await db.rpc('zz2_concluir_corte_reposicao',{p_reposicao_id:id});
+  if(error)throw error;
+  await load();message('Corte adicional concluído. As peças podem seguir os processos de produção.');
+ }catch(err){message(err.message,true)}
 }
 function replacementServed(id){return reposicoesConferidas.filter(c=>c.reposicao_id===id).reduce((n,c)=>n+c.quantidade,0)}
 function replacementSources(productId){
@@ -433,7 +449,7 @@ $('replacementform').onsubmit=async e=>{
   });
   if(error)throw error;
   $('replacementdialog').close();await load();
-  message(qty+' reposição(ões) registradas. '+(origin==='novo_corte'?'Corte adicional disponível para a primeira etapa.':'Reserva vinculada ao defeito.'));
+  message(qty+' reposição(ões) registradas. '+(origin==='novo_corte'?'Corte adicional solicitado. Depois de cortar as peças, confirme o corte no histórico de reposições do produto.':'Reserva vinculada ao defeito.'));
  }catch(err){$('replacementerror').textContent=err.message;message(err.message,true)}
  finally{busy(btn,false,'Registrar reposição')}
 };
