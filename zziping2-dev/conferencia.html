@@ -72,7 +72,7 @@ async function load(notify=false){
   [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias,clientes]=await Promise.all(
    ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais','clientes'].map(table));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
-  $('order').innerHTML='<option value="">Selecione um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
+  $('order').innerHTML='<option value="">Selecione um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(clientes.find(c=>c.id===p.cliente_id)?.nome||p.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
   $('order').value=pedidos.some(p=>p.id===chosen)?chosen:(pedidos[0]?.id||'');
   render();
   if(notify)note('Conferência atualizada com o banco de desenvolvimento.');
