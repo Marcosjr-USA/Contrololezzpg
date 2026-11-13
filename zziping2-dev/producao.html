@@ -21,11 +21,11 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <section id="work" class="hidden"><div class="card"><h2>Pedidos de produção</h2><label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div><div class="actions"><button id="release">Liberar pedido para corte</button><button id="pausebtn" class="secondary hidden" type="button">Pausar produção</button><button id="resumebtn" class="hidden" type="button">Retomar produção</button></div><div id="pauseinfo" class="hidden warn"></div><div id="pausehistory"></div></div>
 <div class="card"><h2>Produtos e andamento</h2><div id="products"></div></div>
 <div class="card"><h2>Histórico de movimentações</h2><p class="muted">Caso algum envio tenha sido lançado errado, use Corrigir envio. O motivo é obrigatório e as alterações ficam no histórico.</p><div id="history"></div></div><div class="card"><h2>Histórico de correções</h2><div id="correctionhistory"></div></div></section>
-<dialog id="correctdialog"><h2>Corrigir lançamento de envio</h2><p class="muted" id="correcthint"></p><form id="correctform">
+<dialog id="correctdialog"><h2>Corrigir lançamento de envio</h2><p class="muted" id="correcthint"></p><p id="correctnotice" class="error" role="alert" style="white-space:pre-wrap"></p><form id="correctform" novalidate>
 <div class="grid"><label>Quantidade enviada<input type="number" name="quantidade" min="1" max="10000000" step="1" required></label><label>Facção / responsável<select id="correctfaccao" name="faccao_id"></select></label></div>
 <div class="grid"><label>Data de envio<input type="date" name="enviado_em" required></label><label>Prazo previsto<input type="date" name="prazo_previsto"></label></div>
 <label>Justificativa da correção (obrigatória)<textarea name="motivo" required minlength="5" maxlength="1000" rows="3" placeholder="Ex.: prazo digitado errado, valor correto confirmado com a facção"></textarea></label>
-<p class="muted">Após uma devolução, a alteração de quantidade e prestador fica bloqueada para proteger os saldos. A correção do prazo permanece disponível.</p>
+<p class="muted">A quantidade nunca pode ficar abaixo do total já devolvido. A facção com devolução permanece bloqueada. Se houver fechamento financeiro ou peças avançadas, outras proteções podem impedir a mudança.</p>
 <div class="actions"><button type="submit" id="savecorrect">Salvar correção</button><button type="button" class="secondary" id="cancelcorrect">Cancelar</button></div></form></dialog>
 <dialog id="pausedialog"><h2>Pausar produção</h2><p class="muted">A pausa bloqueia novos cortes e envios. Devoluções de peças já enviadas continuam permitidas. O prazo original não será modificado automaticamente.</p><form id="pauseform"><label>Motivo da pausa<textarea name="motivo" required minlength="3" maxlength="1000" rows="3" placeholder="Ex.: aguardando matéria-prima"></textarea></label><div class="actions"><button type="submit" id="savepause">Confirmar pausa</button><button type="button" class="secondary" id="cancelpause">Cancelar</button></div></form></dialog>
 <dialog id="resumedialog"><h2>Retomar produção</h2><p class="muted">O prazo original será preservado. Confira os prazos dos envios e, se necessário, registre um novo prazo negociado no processo correspondente.</p><form id="resumeform"><label>Observação (opcional)<textarea name="observacao" maxlength="1000" rows="3" placeholder="Ex.: tecido recebido, produção retomada"></textarea></label><div class="actions"><button type="submit" id="saveresume">Confirmar retomada</button><button type="button" class="secondary" id="cancelresume">Cancelar</button></div></form></dialog>
@@ -281,27 +281,46 @@ function openCorrect(id){
  f.elements.enviado_em.value=m.enviado_em;
  f.elements.prazo_previsto.value=m.prazo_previsto||'';
  const hasReturns=received(id)>0;
- f.elements.quantidade.readOnly=hasReturns;
+ f.elements.quantidade.readOnly=false;
+ f.elements.quantidade.min=String(Math.max(1,received(id)));
+ $('correctnotice').textContent='';
+ $('correcthint').textContent+=' · Quantidade mínima: '+Math.max(1,received(id))+' peça(s) já devolvidas.';
  $('correctfaccao').innerHTML='<option value="">Operação interna</option>'+
   faccoes.filter(x=>x.ativo||x.id===m.faccao_id).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
  $('correctfaccao').value=m.faccao_id||'';
  $('correctfaccao').disabled=stage?.origem==='interno'||hasReturns;
- $('correcthint').textContent+=hasReturns?' · Já houve devolução: quantidade e facção ficam protegidas.':' · Sem devolução: quantidade e prestador podem ser corrigidos, respeitando o saldo.';
+ $('correcthint').textContent+=hasReturns?' · Já houve devolução: facção bloqueada; quantidade pode ser corrigida respeitando o mínimo devolvido e as regras de produção.':' · Sem devolução: quantidade e prestador podem ser corrigidos respeitando o saldo.';
  $('correctdialog').showModal();
 }
 $('cancelcorrect').onclick=()=>$('correctdialog').close();
 $('correctform').onsubmit=async e=>{
- e.preventDefault();const f=e.target,btn=$('savecorrect'),m=movimentos.find(x=>x.id===selectedCorrectMovement);
- if(!m)return;busy(btn,true,'Salvar correção');
+ e.preventDefault();
+ const f=e.target,btn=$('savecorrect'),m=movimentos.find(x=>x.id===selectedCorrectMovement);
+ if(!m)return;
+ $('correctnotice').textContent='';
  try{
+  const quantity=Number(f.elements.quantidade.value),minQty=Math.max(1,received(m.id));
+  const date=f.elements.enviado_em.value,due=f.elements.prazo_previsto.value||null;
+  const reason=f.elements.motivo.value.trim();
+  const fac=$('correctfaccao').disabled?m.faccao_id:(f.elements.faccao_id.value||null);
+  if(!Number.isInteger(quantity)||quantity<minQty||quantity>10000000)
+   throw Error('Informe uma quantidade entre '+minQty+' e 10.000.000. Não pode ser menor que o total devolvido.');
+  if(!date)throw Error('Informe a data do envio.');
+  if(due&&due<date)throw Error('O prazo não pode ser anterior à data do envio.');
+  if(reason.length<5)throw Error('Escreva uma justificativa de pelo menos 5 caracteres.');
+  if(reason.length>1000)throw Error('A justificativa está muito longa.');
+  if(quantity===m.quantidade_enviada&&fac===m.faccao_id&&date===m.enviado_em&&due===(m.prazo_previsto||null))
+   throw Error('Nenhum dado foi alterado. Modifique a quantidade, a data, o prazo ou o prestador antes de salvar.');
+  busy(btn,true,'Salvar correção');
   const {error}=await db.rpc('zz2_corrigir_envio',{
-    p_movimentacao_id:m.id,p_quantidade:Number(f.elements.quantidade.value),
-    p_faccao_id:$('correctfaccao').disabled?m.faccao_id:(f.elements.faccao_id.value||null),
-    p_enviado_em:f.elements.enviado_em.value,p_prazo_previsto:f.elements.prazo_previsto.value||null,
-    p_motivo:f.elements.motivo.value.trim()
+    p_movimentacao_id:m.id,p_quantidade:quantity,p_faccao_id:fac,
+    p_enviado_em:date,p_prazo_previsto:due,p_motivo:reason
   });if(error)throw error;
   $('correctdialog').close();await load();message('Correção registrada com motivo, valores anteriores e novos valores.');
- }catch(err){message(err.message,true)}finally{busy(btn,false,'Salvar correção')}
+ }catch(err){
+  $('correctnotice').textContent=err.message;
+  message(err.message,true);
+ }finally{busy(btn,false,'Salvar correção')}
 };
 function openCut(id){
  const p=findProduct(id);if(!p)return;selectedProduct=id;$('cuttitle').textContent='Concluir corte · '+p.descricao;
