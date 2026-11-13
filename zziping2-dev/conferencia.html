@@ -125,7 +125,7 @@ function render(){
    ' · Etapa final aprovada: '+finalAvailable(t.id)+' · Conferência aprovada: '+a.accepted+
    ' · Pendentes: '+missing+' · Defeitos: '+a.defective+' · Reservas usadas: '+a.reserve+'</div>';
   }).join('');
-  return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+'</h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
+  return '<div class="product"><div class="top"><h3>'+esc(p.descricao)+' <span style="font-size:0.85em;color:#687487;font-weight:600">· '+esc(clientes.find(c=>c.id===order?.cliente_id)?.nome||order?.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(order?.numero_externo||'—')+'</span></h3><span class="pill '+(sum===soldP?'okpill':'')+'">'+sum+' / '+soldP+' aprovadas</span></div>'+
    '<p class="muted">Última etapa: '+esc(lastStep(p.id)?.nome||'Não configurada')+
    ' · Rejeitadas nos processos: '+rejectedCount+
    ' · Reservas disponíveis no corte (incluindo novos cortes): '+totalCutReserve+
