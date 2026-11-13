@@ -19,7 +19,7 @@
 <dialog id="costdialog"><div class="top"><h2 id="costtitle">Custos do produto</h2><button type="button" class="secondary" data-close="costdialog">Fechar</button></div><p class="muted">Processos e quantidades preenchidos automaticamente pela produção. Os serviços internos aparecem somente para consulta; este fechamento paga exclusivamente facções externas.</p><div id="costlines"></div><div class="buttons"><button id="savecosts" type="button">Salvar preços informados</button></div></dialog><dialog id="pricedialog"><div class="top"><h2>Valor de serviço</h2><button type="button" class="secondary" data-close="pricedialog">Fechar</button></div>
 <form id="priceform"><label>Operação / serviço<select name="tipo_servico_id" id="price_type" required></select></label><label>Valor por peça (R$)<input name="valor_unitario" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" required placeholder="Ex.: 2,50"></label><div class="buttons"><button id="saveprice">Salvar valor</button></div></form></dialog>
 <dialog id="closedialog"><div class="top"><h2>Criar fechamento</h2><button type="button" class="secondary" data-close="closedialog">Fechar</button></div>
-<form id="closeform"><label>Mês de referência<input type="month" id="closemonth" required></label><p class="muted">Padrão: último mês completo. Para fechamento antecipado, selecione o mês atual e confira os dias.</p><details><summary>Personalizar período (opcional)</summary><label>Tipo de período<select name="periodo_tipo"><option value="mensal">Mensal</option><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="personalizado">Personalizado</option></select></label>
+<form id="closeform"><label>Mês de referência<input type="month" id="closemonth" required></label><p class="muted">Padrão: mês atual, com prévia acumulada até hoje. Normalmente, confirme o fechamento no último dia do mês.</p><details><summary>Personalizar período (opcional)</summary><label>Tipo de período<select name="periodo_tipo"><option value="mensal">Mensal</option><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="personalizado">Personalizado</option></select></label>
 <div class="grid"><label>De<input type="date" name="inicio" required></label><label>Até<input type="date" name="fim" required></label></div>
 </details><label>Observações (opcional)<textarea name="observacoes" rows="2"></textarea></label><div id="closepreview" class="preview">Escolha o período para ver a prévia.</div><div class="buttons"><button id="saveclose">Confirmar fechamento</button></div></form></dialog>
 <dialog id="paydialog"><div class="top"><h2 id="paytitle">Registrar pagamento</h2><button type="button" class="secondary" data-close="paydialog">Fechar</button></div>
@@ -112,9 +112,7 @@ function renderProductCosts(){
    '<button type="button" class="secondary" data-cost="'+esc(entry.p.id)+'">Ver custos</button></div>';
  }).join('')||'<p class="muted">Nenhum serviço externo aprovado desta facção nos pedidos.</p>';
 }
-function defaultMonth(){
- const now=today().slice(0,7)+'-01',d=new Date(now+'T12:00:00');d.setDate(0);return d.toISOString().slice(0,7);
-}
+function defaultMonth(){return today().slice(0,7)}
 function syncMonth(){
  const month=$('closemonth').value;if(!/^\\d{4}-\\d{2}$/.test(month))return;
  const start=month+'-01',d=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0,12);
