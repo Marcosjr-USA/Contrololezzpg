@@ -51,10 +51,10 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <label>Tipo de devolução<select id="return_mode"><option value="total">Devolução total — baixar todas as peças pendentes</option><option value="parcial">Devolução parcial — informar quantidades</option></select></label>
 <p id="returnsummary" class="muted"></p>
 <div id="returnpartial" class="hidden"><p class="muted">Informe quantas peças retornaram em cada envio/tamanho. O padrão é aprovar todas as peças retornadas. Ajuste a quantidade aprovada se houver rejeições. Use zero para deixar peças pendentes.</p><div id="returnrows"></div></div>
-<div class="grid"><label>Data da devolução<input name="devolvido_em" type="date" required></label><label>Observações<input name="observacoes" placeholder="Ex.: peças danificadas"></label></div>
+<div class="grid"><label>Data da devolução<input name="devolvido_em" type="date" required></label><label id="returnobslabel">Observações (opcional)<input name="observacoes" maxlength="500" placeholder="Ex.: costura com defeito"></label></div><p id="return_defect_summary" class="muted"></p>
 <p class="muted">Na devolução total, todas as peças pendentes serão registradas como aprovadas. Para rejeitar peças, escolha devolução parcial. Movimentações anteriores permanecem no histórico.</p>
 <div class="actions"><button id="savereturn" type="submit">Registrar devolução total</button><button class="secondary" id="cancelreturn" type="button">Cancelar</button></div></form></dialog>
-<p class="foot">ZZIPING 2.0 — Módulo 3 inicial. Conferência final, reprocessos, substituição de peças rejeitadas e financeiro ainda não habilitados.</p></main>
+<p class="foot">ZZIPING 2.0 — Controle de produção e devoluções. Peças rejeitadas ficam registradas com motivo, sem avançar automaticamente ao próximo processo.</p></main>
 <script>
 'use strict';
 const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
@@ -180,6 +180,15 @@ function render(){
   const sz=relatedSizes(prod.id),steps=relatedSteps(prod.id);
   const complete=sz.length>0&&sz.every(t=>cortes.some(c=>c.produto_tamanho_id===t.id));
   const extra=sz.reduce((n,t)=>n+(cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_reserva||0),0);
+  const ids=new Set(sz.map(t=>t.id)),movIds=new Set(movimentos.filter(m=>ids.has(m.produto_tamanho_id)).map(m=>m.id));
+  const rejectedRows=retornos.filter(r=>movIds.has(r.movimentacao_id)&&r.quantidade_recebida>r.quantidade_aprovada);
+  const rejected=rejectedRows.reduce((n,r)=>n+r.quantidade_recebida-r.quantidade_aprovada,0);
+  const rejectionHistory=rejectedRows.map(r=>{
+   const m=movimentos.find(x=>x.id===r.movimentacao_id),t=grades.find(x=>x.id===m?.produto_tamanho_id),
+   step=etapas.find(x=>x.id===m?.processo_id);
+   return '<div class="line">Tamanho '+esc(t?.tamanho||'—')+' · '+esc(step?.nome||'')+
+   ' · '+(r.quantidade_recebida-r.quantidade_aprovada)+' rejeitada(s) · '+esc(r.observacoes||'Registro anterior sem descrição')+'</div>';
+  }).join('');
   const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
   const cutBtn=canEdit&&p.status==='em_producao'&&!isPaused&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
   const stagesHtml=steps.filter(s=>s.ordem>1).map(s=>{
@@ -208,7 +217,9 @@ function render(){
      '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
      ' · Devolvidas: '+state.receivedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div>'+note+'</div>';
   }).join('');
-  return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+'</div><div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
+  return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+' · Rejeitadas nos processos: '+rejected+'</div>'+
+  (rejected?'<details><summary style="cursor:pointer">Ver defeitos registrados ('+rejectedRows.length+')</summary>'+rejectionHistory+'</details>':'')+
+  '<div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
  }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
  const movementList=movimentos.filter(m=>ps.some(prod=>relatedSizes(prod.id).some(t=>t.id===m.produto_tamanho_id)))
   .sort((a,b)=>b.registrado_em.localeCompare(a.registrado_em));
@@ -519,9 +530,18 @@ function pendingMovements(processId){
  return movimentos.filter(m=>m.processo_id===processId&&m.quantidade_enviada>received(m.id))
    .sort((a,b)=>a.enviado_em.localeCompare(b.enviado_em)||a.id.localeCompare(b.id));
 }
+function updateDefectSummary(){
+ const partial=$('return_mode').value==='parcial';
+ const rows=partial?[...$('returnrows').querySelectorAll('[data-mov]')]:[];
+ const rejected=rows.reduce((n,row)=>n+Math.max(0,Number(row.querySelector('.return-qty').value||0)-Number(row.querySelector('.return-approved').value||0)),0);
+ $('returnform').elements.observacoes.required=rejected>0;
+ $('return_defect_summary').textContent=rejected?'Atenção: '+rejected+' peça(s) rejeitada(s). Descreva o defeito em Observações. Estas peças não poderão avançar automaticamente.':'';
+ return rejected;
+}
 function setReturnMode(){
  const partial=$('return_mode').value==='parcial';
  $('returnpartial').classList.toggle('hidden',!partial);
+ updateDefectSummary();
  $('savereturn').textContent=partial?'Registrar devolução parcial':'Registrar devolução total';
  const pending=pendingMovements(selectedReturnProcess);
  const sum=pending.reduce((n,m)=>n+m.quantidade_enviada-received(m.id),0);
@@ -549,9 +569,11 @@ function openReturnProcess(processId){
    '<label>Aprovadas<input class="return-approved" type="number" step="1" min="0" max="'+balance+'" value="'+balance+'"></label></div></div>';
  }).join('');
  $('returnrows').querySelectorAll('.return-partial-row').forEach(row=>{
+  row.querySelector('.return-approved').oninput=updateDefectSummary;
   row.querySelector('.return-qty').oninput=e=>{
    const input=row.querySelector('.return-approved');input.max=e.target.value;
    if(Number(input.value)>Number(e.target.value))input.value=e.target.value;
+   updateDefectSummary();
   };
  });
  setReturnMode();
@@ -573,6 +595,9 @@ $('returnform').onsubmit=async e=>{
    return {movimentacao_id:row.dataset.mov,quantidade_recebida:quantidade,quantidade_aprovada:aprovada};
   }):[];
   if(partial&&!itens.some(item=>item.quantidade_recebida>0))throw Error('Informe pelo menos uma peça devolvida.');
+  const rejected=itens.reduce((n,x)=>n+x.quantidade_recebida-x.quantidade_aprovada,0);
+  if(rejected>0&&f.elements.observacoes.value.trim().length<5)
+   throw Error('Descreva o defeito das '+rejected+' peça(s) rejeitadas (mínimo 5 caracteres).');
   const {data,error}=await db.rpc('zz2_registrar_retorno_lote',{
     p_processo_id:selectedReturnProcess,p_modo:partial?'parcial':'total',p_itens:itens,
     p_devolvido_em:f.elements.devolvido_em.value,p_observacoes:f.elements.observacoes.value.trim()||null
