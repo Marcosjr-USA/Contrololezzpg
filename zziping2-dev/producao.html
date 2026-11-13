@@ -353,6 +353,90 @@ function transferCandidates(productId){
   return ta.localeCompare(tb,'pt-BR',{numeric:true})||a.enviado_em.localeCompare(b.enviado_em);
  });
 }
+function replacementServed(id){return reposicoesConferidas.filter(c=>c.reposicao_id===id).reduce((n,c)=>n+c.quantidade,0)}
+function replacementSources(productId){
+ const sizeIds=new Set(relatedSizes(productId).map(t=>t.id)),sources=[];
+ for(const r of retornos){
+  if(r.quantidade_recebida<=r.quantidade_aprovada)continue;
+  const m=movimentos.find(x=>x.id===r.movimentacao_id);
+  if(!m||!sizeIds.has(m.produto_tamanho_id))continue;
+  const assigned=reposicoes.filter(rep=>rep.retorno_defeito_id===r.id).reduce((n,x)=>n+x.quantidade,0);
+  const rem=r.quantidade_recebida-r.quantidade_aprovada-assigned;
+  if(rem>0){const t=grades.find(x=>x.id===m.produto_tamanho_id),step=etapas.find(x=>x.id===m.processo_id);
+   sources.push({id:'retorno:'+r.id,sizeId:m.produto_tamanho_id,available:rem,
+    label:'Tamanho '+(t?.tamanho||'')+' · '+(step?.nome||'')+' · '+rem+' rejeitada(s) sem reposição'});
+  }
+ }
+ for(const c of conferencias){
+  if(c.quantidade_defeituosa<1||!sizeIds.has(c.produto_tamanho_id))continue;
+  const assigned=reposicoes.filter(rep=>rep.conferencia_defeito_id===c.id).reduce((n,x)=>n+x.quantidade,0);
+  const rem=c.quantidade_defeituosa-assigned;
+  if(rem>0){const t=grades.find(x=>x.id===c.produto_tamanho_id);
+   sources.push({id:'conferencia:'+c.id,sizeId:c.produto_tamanho_id,available:rem,
+    label:'Tamanho '+(t?.tamanho||'')+' · Defeito na conferência · '+rem+' sem reposição'});
+  }
+ }
+ return sources;
+}
+function replacementReserve(sizeId){
+ const cut=cortes.find(c=>c.produto_tamanho_id===sizeId)?.quantidade_reserva||0;
+ const used=conferencias.filter(c=>c.produto_tamanho_id===sizeId).reduce((n,c)=>n+c.quantidade_reserva_utilizada,0);
+ const committed=reposicoes.filter(r=>r.produto_tamanho_id===sizeId&&r.origem==='reserva')
+ .reduce((n,r)=>n+r.quantidade-replacementServed(r.id),0);
+ return Math.max(0,cut-used-committed);
+}
+function updateReplacementAvailability(){
+ const source=replacementSources(selectedReplacementProduct).find(x=>x.id===$('replacementdefect').value);
+ if(!source)return;
+ const reserves=replacementReserve(source.sizeId),mode=$('replacementorigin').value;
+ const max=mode==='reserva'?Math.min(source.available,reserves):source.available;
+ const f=$('replacementform');
+ f.elements.quantidade.max=String(max);
+ if(Number(f.elements.quantidade.value)>max)f.elements.quantidade.value=String(max);
+ $('replacementavailability').textContent='Defeitos sem reposição: '+source.available+' · Reservas já cortadas disponíveis: '+reserves+
+ (mode==='novo_corte'?' · Novo corte será registrado.':' · Reserva será separada.');
+ $('savereplacement').disabled=max<1;
+}
+function openReplacement(id){
+ const prod=findProduct(id),sources=replacementSources(id);
+ if(!prod||!sources.length){message('Não há defeitos pendentes de reposição para este produto.',true);return}
+ selectedReplacementProduct=id;
+ $('replacementform').reset();
+ $('replacementerror').textContent='';
+ $('replacementproduct').textContent=prod.descricao;
+ $('replacementdefect').innerHTML=sources.map(src=>'<option value="'+esc(src.id)+'">'+esc(src.label)+'</option>').join('');
+ $('replacementorigin').value=replacementReserve(sources[0].sizeId)>0?'reserva':'novo_corte';
+ $('replacementform').elements.quantidade.value='1';
+ updateReplacementAvailability();
+ $('replacementdialog').showModal();
+}
+$('cancelreplacement').onclick=()=>$('replacementdialog').close();
+$('replacementdefect').onchange=updateReplacementAvailability;
+$('replacementorigin').onchange=updateReplacementAvailability;
+$('replacementform').onsubmit=async e=>{
+ e.preventDefault();const f=e.target,btn=$('savereplacement');
+ const src=replacementSources(selectedReplacementProduct).find(x=>x.id===$('replacementdefect').value);
+ $('replacementerror').textContent='';
+ try{
+  if(!src)throw Error('Defeito não localizado. Atualize a tela.');
+  const qty=Number(f.elements.quantidade.value),origin=$('replacementorigin').value,reason=f.elements.motivo.value.trim();
+  if(!Number.isInteger(qty)||qty<1||qty>src.available)throw Error('Informe entre 1 e '+src.available+' peça(s).');
+  if(origin==='reserva'&&qty>replacementReserve(src.sizeId))throw Error('Reserva insuficiente. Escolha novo corte.');
+  if(reason.length<5)throw Error('Informe o motivo (mínimo 5 caracteres).');
+  busy(btn,true,'Registrar reposição');
+  const fromReturn=src.id.startsWith('retorno:');
+  const {error}=await db.rpc('zz2_solicitar_reposicao',{
+   p_tamanho_id:src.sizeId,
+   p_retorno_defeito_id:fromReturn?src.id.slice(8):null,
+   p_conferencia_defeito_id:fromReturn?null:src.id.slice(11),
+   p_quantidade:qty,p_origem:origin,p_motivo:reason
+  });
+  if(error)throw error;
+  $('replacementdialog').close();await load();
+  message(qty+' reposição(ões) registradas. '+(origin==='novo_corte'?'Corte adicional disponível para a primeira etapa.':'Reserva vinculada ao defeito.'));
+ }catch(err){$('replacementerror').textContent=err.message;message(err.message,true)}
+ finally{busy(btn,false,'Registrar reposição')}
+};
 function openTransferProduct(productId){
  const product=findProduct(productId),candidates=transferCandidates(productId);
  if(!product||!candidates.length){message('Este produto não tem peças pendentes em facções externas.',true);return}
