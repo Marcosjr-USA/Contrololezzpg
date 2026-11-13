@@ -52,7 +52,7 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <dialog id="senddialog"><h2 id="sendtitle">Enviar para processo</h2><p id="sendhint" class="muted"></p>
 <form id="sendform"><label>Como deseja enviar?<select id="send_mode"><option value="todos">Todos os tamanhos disponíveis (envio completo)</option><option value="unico">Um tamanho específico (envio parcial)</option></select></label>
 <p id="send_batch_info" class="muted"></p><div id="send_single_fields" class="grid hidden"><label>Tamanho<select name="tamanho_id" id="send_size"></select></label><label>Quantidade<input name="quantidade" type="number" min="1" step="1"></label></div>
-<div class="grid"><label>Facção / Prestador<select name="faccao_id" id="send_faccao"><option value="">Sem facção (operação interna)</option></select></label><label>Data de envio<input name="enviado_em" type="date" required></label></div>
+<div class="grid"><label>Facção / Prestador<select name="faccao_id" id="send_faccao"><option value="">Sem facção (operação interna)</option></select><small id="send_faccao_hint" class="muted"></small></label><label>Data de envio<input name="enviado_em" type="date" required></label></div>
 <label>Prazo previsto da devolução (preenchido automaticamente; pode ajustar)<input name="prazo_previsto" type="date"></label><p id="send_deadline_info" class="muted"></p>
 <div class="actions"><button id="savesend" type="submit">Registrar envio</button><button class="secondary" id="cancelsend" type="button">Cancelar</button></div></form></dialog>
 <dialog id="returndialog"><h2 id="returntitle">Devolução do processo</h2><p id="returnhint" class="muted"></p>
@@ -639,6 +639,21 @@ $('cutform').onsubmit=async e=>{
   $('cutdialog').close();await load();message('Corte concluído. As peças extras foram registradas como reserva.');
  }catch(e){message(e.message,true)}finally{busy(btn,false,'Concluir corte')}
 };
+function defaultServiceProvider(stage){
+ if(stage?.origem!=='facção')return null;
+ // Facção do mesmo produto e da mesma etapa, por quantidade enviada.
+ // Em empate, prioriza a movimentação mais recente. Nunca preenche facção inativa.
+ const options=new Map();
+ for(const m of movimentos.filter(m=>m.processo_id===stage.id&&m.faccao_id)){
+  const provider=faccoes.find(f=>f.id===m.faccao_id&&f.ativo);
+  if(!provider)continue;
+  const state=options.get(m.faccao_id)||{id:m.faccao_id,qty:0,date:''};
+  state.qty+=Number(m.quantidade_enviada)||0;
+  state.date=m.registrado_em>state.date?m.registrado_em:state.date;
+  options.set(m.faccao_id,state);
+ }
+ return [...options.values()].sort((a,b)=>b.qty-a.qty||b.date.localeCompare(a.date))[0]?.id||null;
+}
 function openSend(id){
  const stage=etapas.find(x=>x.id===id),product=findProduct(stage?.produto_id);
  if(!stage||!product)return;selectedProcess=id;
@@ -654,7 +669,12 @@ function openSend(id){
  $('send_mode').value='todos';
  $('send_faccao').required=stage.origem==='facção';
  $('send_faccao').disabled=stage.origem==='interno';
- $('send_faccao').value='';
+ const chosen=defaultServiceProvider(stage);
+ $('send_faccao').value=chosen||'';
+ $('send_faccao_hint').textContent=stage.origem==='interno'?
+  'Etapa interna: não exige facção.':
+  chosen?'Preenchido automaticamente com a facção que mais recebeu peças deste mesmo produto e serviço. Você pode escolher outro prestador.':
+  'Escolha a facção responsável. Nas próximas remessas deste serviço, ela será sugerida automaticamente.';
  updateSendMode();updateSendDeadline();
  $('senddialog').showModal();
 }
@@ -677,7 +697,10 @@ $('sendform').onsubmit=async e=>{
    count=Number(f.elements.quantidade.value);
   }
   $('senddialog').close();await load();
-  message(count+' peça(s) enviadas para '+etapas.find(x=>x.id===selectedProcess)?.nome+'. Os tamanhos ficam registrados separadamente.');
+  const provider=faccoes.find(x=>x.id===common.p_faccao_id);
+  message(count+' peça(s) enviadas para '+etapas.find(x=>x.id===selectedProcess)?.nome+
+   (provider?' · Prestador: '+provider.nome:' · Operação interna')+
+   '. O financeiro contabilizará as peças aprovadas no fechamento do prestador escolhido.');
  }catch(e){message(e.message,true)}finally{busy(btn,false,'Registrar envio')}
 };
 function pendingMovements(processId){
