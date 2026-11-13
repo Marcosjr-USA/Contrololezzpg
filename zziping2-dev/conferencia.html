@@ -29,7 +29,7 @@ const SB_KEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db=null,profile=null,permission=null,canWrite=false,selectedProduct=null;
-let pedidos=[],produtos=[],tamanhos=[],etapas=[],movimentos=[],retornos=[],cortes=[],conferencias=[];
+let pedidos=[],produtos=[],tamanhos=[],etapas=[],movimentos=[],retornos=[],cortes=[],conferencias=[],clientes=[];
 const show=(id,on)=>$(id).classList.toggle('hidden',!on);
 function note(text,error=false){$('notice').textContent=text||'';$('notice').className=error?'error':'ok'}
 async function table(name){const {data,error}=await db.from(name).select('*');if(error)throw error;return data||[]}
@@ -69,8 +69,8 @@ async function init(){
 async function load(notify=false){
  const chosen=$('order').value;
  try{
-  [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias]=await Promise.all(
-   ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais'].map(table));
+  [pedidos,produtos,tamanhos,etapas,movimentos,retornos,cortes,conferencias,clientes]=await Promise.all(
+   ['pedidos','pedido_produtos','produto_tamanhos','produto_processos','movimentacoes_producao','retornos_producao','cortes','conferencias_finais','clientes'].map(table));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
   $('order').innerHTML='<option value="">Selecione um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
   $('order').value=pedidos.some(p=>p.id===chosen)?chosen:(pedidos[0]?.id||'');
@@ -80,7 +80,7 @@ async function load(notify=false){
 }
 function render(){
  const order=pedidos.find(p=>p.id===$('order').value);
- $('ordermeta').innerHTML=order?'<p><strong>Pedido '+esc(order.numero_externo)+'</strong> · '+esc(order.prioridade)+' · '+esc(order.status)+' · Prazo '+esc(order.prazo_entrega)+'</p>':'<p class="muted">Nenhum pedido disponível.</p>';
+ $('ordermeta').innerHTML=order?'<p><strong>'+esc(clientes.find(c=>c.id===order.cliente_id)?.nome||order.cliente_nome_livre||'Cliente não informado')+' · Pedido '+esc(order.numero_externo)+'</strong> · '+esc(order.prioridade)+' · '+esc(order.status)+' · Prazo '+esc(order.prazo_entrega)+'</p>':'<p class="muted">Nenhum pedido disponível.</p>';
  const ps=produtos.filter(p=>p.pedido_id===order?.id);
  let sold=0,accepted=0,defective=0,used=0,rowsCount=0;
  for(const p of ps)for(const t of tamanhos.filter(x=>x.produto_id===p.id)){
