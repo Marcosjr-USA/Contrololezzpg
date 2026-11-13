@@ -18,9 +18,11 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <p id="notice" role="status" aria-live="polite"></p>
 <div class="card top"><a href="pedidos.html" class="button secondary">← Pedidos</a> <a href="conferencia.html" class="button secondary">Conferência Final →</a> <a href="relatorios.html" class="button secondary">Relatórios</a> <a href="financeiro.html" class="button secondary">Financeiro →</a><div id="identity" class="muted">Verificando sessão...</div><button id="reload" type="button" class="secondary">Atualizar</button></div>
 <section id="blocked" class="card hidden"><h2>Sem acesso</h2><p id="blockedmsg">Faça login na ZZIPING 2.0 para acessar a produção.</p><a href="index.html" class="button">Entrar</a></section>
-<section id="work" class="hidden"><div class="card"><h2>Pedidos de produção</h2><label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div><div class="actions"><button id="release">Liberar pedido para corte</button></div></div>
+<section id="work" class="hidden"><div class="card"><h2>Pedidos de produção</h2><label>Selecione o pedido<select id="order"></select></label><div id="ordermeta"></div><div class="actions"><button id="release">Liberar pedido para corte</button><button id="pausebtn" class="secondary hidden" type="button">Pausar produção</button><button id="resumebtn" class="hidden" type="button">Retomar produção</button></div><div id="pauseinfo" class="hidden warn"></div><div id="pausehistory"></div></div>
 <div class="card"><h2>Produtos e andamento</h2><div id="products"></div></div>
 <div class="card"><h2>Histórico de movimentações</h2><div id="history"></div></div></section>
+<dialog id="pausedialog"><h2>Pausar produção</h2><p class="muted">A pausa bloqueia novos cortes e envios. Devoluções de peças já enviadas continuam permitidas. O prazo original não será modificado automaticamente.</p><form id="pauseform"><label>Motivo da pausa<textarea name="motivo" required minlength="3" maxlength="1000" rows="3" placeholder="Ex.: aguardando matéria-prima"></textarea></label><div class="actions"><button type="submit" id="savepause">Confirmar pausa</button><button type="button" class="secondary" id="cancelpause">Cancelar</button></div></form></dialog>
+<dialog id="resumedialog"><h2>Retomar produção</h2><p class="muted">O prazo original será preservado. Confira os prazos dos envios e, se necessário, registre um novo prazo negociado no processo correspondente.</p><form id="resumeform"><label>Observação (opcional)<textarea name="observacao" maxlength="1000" rows="3" placeholder="Ex.: tecido recebido, produção retomada"></textarea></label><div class="actions"><button type="submit" id="saveresume">Confirmar retomada</button><button type="button" class="secondary" id="cancelresume">Cancelar</button></div></form></dialog>
 <dialog id="cutdialog"><h2 id="cuttitle">Concluir corte</h2><p class="muted">Informe a quantidade efetivamente cortada por tamanho. O sistema registrará como reserva toda quantidade excedente à vendida. O corte completo não pode ser lançado duas vezes.</p>
 <form id="cutform"><div id="cutrows"></div><div class="actions"><button id="savecut" type="submit">Concluir corte</button><button type="button" class="secondary" id="cancelcut">Cancelar</button></div></form></dialog>
 <dialog id="senddialog"><h2 id="sendtitle">Enviar para processo</h2><p id="sendhint" class="muted"></p>
@@ -43,7 +45,7 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null,selectedReturnProcess=null;
-let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[];
+let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[],pausas=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 function addBusinessDays(iso,days){
  const parts=(iso||'').split('-').map(Number);
@@ -111,11 +113,11 @@ async function init(){
 async function load(keep=true){
  const selected=$('order').value;
  try{
-  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes]=await Promise.all([
-   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes'
+  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes,pausas]=await Promise.all([
+   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes','pausas_producao'
   ].map(fetchTable));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
-  $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.numero_externo)+' · '+esc(p.status)+'</option>').join('');
+  $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.numero_externo)+' · '+esc(p.status)+(p.pausado_em?' (PAUSADO)':'')+'</option>').join('');
   $('order').value=pedidos.some(p=>p.id===selected)?selected:(pedidos[0]?.id||'');
   render();
   if(!keep)message('Produção atualizada.');
@@ -147,6 +149,16 @@ function render(){
  const p=pedidos.find(x=>x.id===$('order').value);
  $('ordermeta').innerHTML=p?'<div class="line"><b>Pedido:</b> '+esc(p.numero_externo)+' · '+esc(p.prioridade)+' · Entrega '+esc(p.prazo_entrega)+' · <b>'+esc(p.status)+'</b></div>':'<p class="muted">Nenhum pedido encontrado.</p>';
  $('release').disabled=!canEdit||!p||p.status!=='rascunho';
+ const isPaused=!!p?.pausado_em;
+ $('pausebtn').classList.toggle('hidden',!canEdit||!p||p.status!=='em_producao'||isPaused);
+ $('resumebtn').classList.toggle('hidden',!canEdit||!p||p.status!=='em_producao'||!isPaused);
+ $('pauseinfo').classList.toggle('hidden',!isPaused);
+ const activePause=pausas.find(x=>x.pedido_id===p?.id&&!x.retomado_em);
+ $('pauseinfo').textContent=isPaused?'PRODUÇÃO PAUSADA · Motivo: '+(activePause?.motivo||'Informação de pausa não disponível')+'. Novos cortes e envios bloqueados; devoluções de peças já enviadas continuam disponíveis. Prazo original mantido.':'';
+ $('pausehistory').innerHTML=pausas.filter(x=>x.pedido_id===p?.id).sort((a,b)=>b.inicio_em.localeCompare(a.inicio_em)).map(x=>
+  '<div class="line"><small><b>Pausa:</b> '+esc(new Date(x.inicio_em).toLocaleString('pt-BR'))+' · '+esc(x.motivo)+
+  (x.retomado_em?' · <b>Retomada:</b> '+esc(new Date(x.retomado_em).toLocaleString('pt-BR'))+(x.motivo_retomada?' · '+esc(x.motivo_retomada):''):' · <b>Em pausa</b>')+
+  ' · Prazo original: '+esc(x.prazo_original||'não definido')+'</small></div>').join('');
  $('release').classList.toggle('hidden',!p||p.status!=='rascunho');
  const ps=produtos.filter(x=>x.pedido_id===p?.id);
  $('products').innerHTML=ps.map(prod=>{
@@ -154,12 +166,12 @@ function render(){
   const complete=sz.length>0&&sz.every(t=>cortes.some(c=>c.produto_tamanho_id===t.id));
   const extra=sz.reduce((n,t)=>n+(cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_reserva||0),0);
   const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
-  const cutBtn=canEdit&&p.status==='em_producao'&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
+  const cutBtn=canEdit&&p.status==='em_producao'&&!isPaused&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
   const stagesHtml=steps.filter(s=>s.ordem>1).map(s=>{
    const state=stageStatus(s,sz);
-   const canSend=canEdit&&p.status==='em_producao'&&state.availableQty>0;
+   const canSend=canEdit&&p.status==='em_producao'&&!isPaused&&state.availableQty>0;
    const waiting=state.availableQty===0&&state.sent===0;
-   const action=state.id==='done'?'Concluído':state.id==='late'?'Atrasado':state.id==='progress'?'Em andamento':waiting?'Aguardando peças':'Enviar peças';
+   const action=isPaused?'Produção pausada':state.id==='done'?'Concluído':state.id==='late'?'Atrasado':state.id==='progress'?'Em andamento':waiting?'Aguardando peças':'Enviar peças';
    const previous=steps.find(x=>x.ordem===s.ordem-1);
    const reason=waiting?
      (s.ordem===2?'O corte ainda não disponibilizou peças para esta etapa.':
@@ -168,14 +180,14 @@ function render(){
      state.id==='late'?'Há peças enviadas aguardando devolução após o prazo.':
      state.id==='progress'?'Há peças em andamento, mas nenhuma disponível para novo envio. Aguarde ou registre a devolução.':
      'Não há peças disponíveis para envio neste momento.';
-   const button=canEdit&&p.status==='em_producao'?
+   const button=canEdit&&p.status==='em_producao'&&!isPaused?
     '<button type="button" class="secondary stage-action status-'+state.id+'"'+
       (canSend?' data-send="'+esc(s.id)+'"':' data-blocked="'+esc(s.id)+'"')+
       ' title="'+esc(canSend?'Clique para enviar peças disponíveis':reason)+'">'+action+'</button>':'';
    const returnButton=canEdit&&p.status==='em_producao'&&state.pending>0?
      '<button type="button" class="return-action" data-returnprocess="'+esc(s.id)+'">Registrar devolução ('+state.pending+')</button>':'';
    const chip='<span class="status-chip status-'+state.id+'">'+state.name+'</span>';
-   const note=!canSend&&p.status==='em_producao'&&state.id!=='done'?
+   const note=!isPaused&&!canSend&&p.status==='em_producao'&&state.id!=='done'?
      '<div class="muted" style="margin-top:5px">ℹ '+esc(reason)+'</div>':'';
    return '<div class="row stage-row status-'+state.id+'"><div class="top"><div><strong>'+s.ordem+'. '+esc(s.nome)+'</strong>'+chip+'</div><div class="actions">'+returnButton+button+'</div></div>'+
      '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
@@ -193,6 +205,28 @@ function render(){
 }
 function busy(el,v,text){el.disabled=v;el.textContent=v?'Salvando...':text}
 $('order').onchange=render;$('reload').onclick=()=>load(false);
+$('pausebtn').onclick=()=>{$('pauseform').reset();$('pausedialog').showModal()};
+$('resumebtn').onclick=()=>{$('resumeform').reset();$('resumedialog').showModal()};
+$('cancelpause').onclick=()=>$('pausedialog').close();
+$('cancelresume').onclick=()=>$('resumedialog').close();
+$('pauseform').onsubmit=async e=>{
+ e.preventDefault();const btn=$('savepause'),id=$('order').value;
+ busy(btn,true,'Confirmar pausa');
+ try{
+  const {error}=await db.rpc('zz2_pausar_producao',{p_pedido_id:id,p_motivo:e.target.elements.motivo.value.trim()});
+  if(error)throw error;
+  $('pausedialog').close();await load();message('Produção pausada e motivo salvo no histórico. Novos envios e cortes estão bloqueados.');
+ }catch(err){message(err.message,true)}finally{busy(btn,false,'Confirmar pausa')}
+};
+$('resumeform').onsubmit=async e=>{
+ e.preventDefault();const btn=$('saveresume'),id=$('order').value;
+ busy(btn,true,'Confirmar retomada');
+ try{
+  const {error}=await db.rpc('zz2_retomar_producao',{p_pedido_id:id,p_observacao:e.target.elements.observacao.value.trim()||null});
+  if(error)throw error;
+  $('resumedialog').close();await load();message('Produção retomada. O prazo original e o histórico foram preservados.');
+ }catch(err){message(err.message,true)}finally{busy(btn,false,'Confirmar retomada')}
+};
 $('release').onclick=async()=>{
  const id=$('order').value,p=pedidos.find(x=>x.id===id);
  if(!p||!confirm('Liberar o pedido '+p.numero_externo+' para produção? Esta mudança é permanente nesta fase.'))return;
