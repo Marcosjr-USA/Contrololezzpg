@@ -22,6 +22,14 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 <div class="card"><h2>Produtos e andamento</h2><div id="products"></div></div>
 <div class="card"><h2>Movimentações agrupadas por produto</h2><p class="muted">Selecione um produto para transferir peças e escolha o tamanho na janela. Para consultar ou corrigir envios individuais, abra os detalhes do produto.</p><div id="history"></div></div><div class="card"><h2>Histórico de correções</h2><div id="correctionhistory"></div></div>
 <div class="card"><h2>Transferências entre facções</h2><p class="muted">Transferências de peças pendentes sem registrar devolução ou gerar pagamento. A origem e o destino ficam preservados.</p><div id="transferhistory"></div></div></section>
+<dialog id="replacementdialog"><h2>Reposição de peças com defeito</h2><p id="replacementproduct" class="muted"></p>
+<form id="replacementform" novalidate><label>Defeito e tamanho<select id="replacementdefect" name="defeito" required></select></label>
+<div class="grid"><label>Quantidade<input name="quantidade" type="number" min="1" step="1" required></label>
+<label>Tipo de reposição<select id="replacementorigin" name="origem"><option value="reserva">Peça reserva já cortada</option><option value="novo_corte">Novo corte de reposição</option></select></label></div>
+<p id="replacementavailability" class="muted"></p>
+<label>Motivo da reposição<textarea name="motivo" required minlength="5" maxlength="1000" rows="2" placeholder="Ex.: substituir peça com defeito"></textarea></label>
+<p class="muted">A reposição não altera as quantidades vendidas. Uma nova peça cortada seguirá os processos de produção normalmente; o uso efetivo da reserva é confirmado na Conferência Final.</p>
+<p id="replacementerror" class="error"></p><div class="actions"><button type="submit" id="savereplacement">Registrar reposição</button><button type="button" id="cancelreplacement" class="secondary">Cancelar</button></div></form></dialog>
 <dialog id="transferdialog"><h2>Transferir peças entre facções</h2><p id="transferhint" class="muted"></p>
 <form id="transferform"><label>Tamanho e processo de origem<select id="transfermovement" required></select></label><label>Nova facção / prestador<select id="transferdest" required></select></label>
 <div class="grid"><label>Peças a transferir<input type="number" name="quantidade" min="1" step="1" required></label><label>Data da transferência<input type="date" name="data_transferencia" required></label></div>
@@ -59,8 +67,8 @@ button.secondary.stage-action.status-progress:disabled,button.secondary.stage-ac
 'use strict';
 const SBASE='https://clgsozqaahxiwunvrkra.supabase.co',PKEY='sb_publishable_quy09O66_yP0hIxUSo2Ubg_bSimx6QG';
 const $=x=>document.getElementById(x),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null,selectedReturnProcess=null,selectedCorrectMovement=null,selectedTransferMovement=null;
-let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[],pausas=[],correcoes=[],transferencias=[],clientes=[];
+let db,auth,profile,rights,canEdit=false,selectedProduct=null,selectedProcess=null,selectedMovement=null,selectedReturnProcess=null,selectedCorrectMovement=null,selectedTransferMovement=null,selectedReplacementProduct=null;
+let pedidos=[],produtos=[],grades=[],etapas=[],cortes=[],movimentos=[],retornos=[],faccoes=[],pausas=[],correcoes=[],transferencias=[],clientes=[],reposicoes=[],cortesReposicao=[],reposicoesConferidas=[],conferencias=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 function addBusinessDays(iso,days){
  const parts=(iso||'').split('-').map(Number);
@@ -107,7 +115,7 @@ function available(size,proc){
  const t=grades.find(x=>x.id===size),pr=etapas.find(x=>x.id===proc);
  if(!t||!pr||pr.ordem<2)return 0;
  const prev=etapas.find(x=>x.produto_id===t.produto_id&&x.ordem===pr.ordem-1);
- const done=pr.ordem===2?(cortes.find(x=>x.produto_tamanho_id===size)?.quantidade_cortada||0):approvedTotal(size,prev?.id);
+ const done=pr.ordem===2?((cortes.find(x=>x.produto_tamanho_id===size)?.quantidade_cortada||0)+cortesReposicao.filter(x=>x.produto_tamanho_id===size).reduce((n,x)=>n+x.quantidade,0)):approvedTotal(size,prev?.id);
  return Math.max(0,done-processTotal(size,proc));
 }
 async function fetchTable(table){const {data,error}=await db.from(table).select('*');if(error)throw error;return data||[]}
@@ -128,8 +136,8 @@ async function init(){
 async function load(keep=true){
  const selected=$('order').value;
  try{
-  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes,pausas,correcoes,transferencias,clientes]=await Promise.all([
-   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes','pausas_producao','correcoes_movimentacao','transferencias_faccoes','clientes'
+  [pedidos,produtos,grades,etapas,cortes,movimentos,retornos,faccoes,pausas,correcoes,transferencias,clientes,reposicoes,cortesReposicao,reposicoesConferidas,conferencias]=await Promise.all([
+   'pedidos','pedido_produtos','produto_tamanhos','produto_processos','cortes','movimentacoes_producao','retornos_producao','faccoes','pausas_producao','correcoes_movimentacao','transferencias_faccoes','clientes','reposicoes_pecas','cortes_reposicao','reposicoes_conferidas','conferencias_finais'
   ].map(fetchTable));
   pedidos.sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
   $('order').innerHTML='<option value="">Escolha um pedido</option>'+pedidos.map(p=>'<option value="'+esc(p.id)+'">'+esc((clientes.find(c=>c.id===p.cliente_id)?.nome||p.cliente_nome_livre||'Cliente não informado'))+' · Pedido '+esc(p.numero_externo)+' · '+esc(p.status)+(p.pausado_em?' (PAUSADO)':'')+'</option>').join('');
@@ -151,7 +159,7 @@ function stageStatus(stage,sizes){
    sizes.length>0&&sizes.every(t=>!!cortes.find(c=>c.produto_tamanho_id===t.id)):
    !!prev&&stageStatus(prev,sizes).id==='done';
  const expected=sizes.reduce((n,t)=>n+(stage.ordem===2?
-  (cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0):
+  ((cortes.find(c=>c.produto_tamanho_id===t.id)?.quantidade_cortada||0)+cortesReposicao.filter(x=>x.produto_tamanho_id===t.id).reduce((n,x)=>n+x.quantidade,0)):
   approvedTotal(t.id,prev?.id)),0);
  const hasReject=receivedQty>approvedQty;
  const done=sent>0&&previousFinished&&availableQty===0&&pending===0&&!hasReject&&approvedQty===expected;
@@ -183,6 +191,15 @@ function render(){
   const ids=new Set(sz.map(t=>t.id)),movIds=new Set(movimentos.filter(m=>ids.has(m.produto_tamanho_id)).map(m=>m.id));
   const rejectedRows=retornos.filter(r=>movIds.has(r.movimentacao_id)&&r.quantidade_recebida>r.quantidade_aprovada);
   const rejected=rejectedRows.reduce((n,r)=>n+r.quantidade_recebida-r.quantidade_aprovada,0);
+  const replacementRows=reposicoes.filter(r=>ids.has(r.produto_tamanho_id));
+  const pendingReplacement=replacementRows.reduce((n,r)=>n+Math.max(0,r.quantidade-replacementServed(r.id)),0);
+  const extraCuts=cortesReposicao.filter(c=>ids.has(c.produto_tamanho_id)).reduce((n,c)=>n+c.quantidade,0);
+  const replacementHistory=replacementRows.map(r=>{
+    const t=grades.find(x=>x.id===r.produto_tamanho_id);
+    return '<div class="line">Tamanho '+esc(t?.tamanho||'—')+' · '+r.quantidade+' peça(s) · '+
+     esc(r.origem==='novo_corte'?'Novo corte':'Reserva')+' · Finalizadas: '+replacementServed(r.id)+
+     ' · Pendentes: '+Math.max(0,r.quantidade-replacementServed(r.id))+' · '+esc(r.motivo)+'</div>';
+  }).join('');
   const rejectionHistory=rejectedRows.map(r=>{
    const m=movimentos.find(x=>x.id===r.movimentacao_id),t=grades.find(x=>x.id===m?.produto_tamanho_id),
    step=etapas.find(x=>x.id===m?.processo_id);
@@ -190,6 +207,8 @@ function render(){
    ' · '+(r.quantidade_recebida-r.quantidade_aprovada)+' rejeitada(s) · '+esc(r.observacoes||'Registro anterior sem descrição')+'</div>';
   }).join('');
   const status=p.status!=='em_producao'?'Aguardando liberação':complete?'Corte concluído':'Aguardando corte';
+  const replacementButton=canEdit&&p.status==='em_producao'&&!isPaused&&replacementSources(prod.id).length?
+   '<button type="button" class="secondary" data-replacement="'+esc(prod.id)+'">Registrar reposição</button>':'';
   const cutBtn=canEdit&&p.status==='em_producao'&&!isPaused&&!complete?'<button class="secondary" data-cut="'+esc(prod.id)+'">Concluir corte</button>':'';
   const stagesHtml=steps.filter(s=>s.ordem>1).map(s=>{
    const state=stageStatus(s,sz);
@@ -217,9 +236,11 @@ function render(){
      '<div class="muted">Disponíveis: '+state.availableQty+' · Enviadas: '+state.sent+
      ' · Devolvidas: '+state.receivedQty+' · Pendentes: '+state.pending+' · '+esc(s.origem)+'</div>'+note+'</div>';
   }).join('');
-  return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+' · Rejeitadas nos processos: '+rejected+'</div>'+
+  return '<div class="item"><div class="top"><h3>'+esc(prod.descricao)+'</h3><span class="pill">'+prod.quantidade_vendida+' vendidas</span></div><div class="line">'+status+' · Peças extras cortadas: '+extra+' · Novos cortes de reposição: '+extraCuts+
+  ' · Rejeitadas nos processos: '+rejected+' · Reposições pendentes: '+pendingReplacement+'</div>'+
+  (replacementRows.length?'<details><summary>Ver reposições ('+replacementRows.length+')</summary>'+replacementHistory+'</details>':'')+
   (rejected?'<details><summary style="cursor:pointer">Ver defeitos registrados ('+rejectedRows.length+')</summary>'+rejectionHistory+'</details>':'')+
-  '<div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+'</div>'+stagesHtml+'</div>';
+  '<div class="line"><span>Grade:</span> '+sz.map(t=>esc(t.tamanho)+': '+t.quantidade_vendida+' vendidas'+(cortes.find(c=>c.produto_tamanho_id===t.id)?', '+cortes.find(c=>c.produto_tamanho_id===t.id).quantidade_cortada+' cortadas':'')).join(' · ')+'</div><div class="actions">'+cutBtn+replacementButton+'</div>'+stagesHtml+'</div>';
  }).join('')||'<p class="muted">Nenhum produto para este pedido.</p>';
  const movementList=movimentos.filter(m=>ps.some(prod=>relatedSizes(prod.id).some(t=>t.id===m.produto_tamanho_id)))
   .sort((a,b)=>b.registrado_em.localeCompare(a.registrado_em));
@@ -302,9 +323,10 @@ $('release').onclick=async()=>{
  try{const {error}=await db.rpc('zz2_liberar_pedido',{p_pedido_id:id});if(error)throw error;await load();message('Pedido liberado para produção. O cortador pode concluir o corte.')}catch(e){message(e.message,true)}finally{busy(btn,false,'Liberar pedido para corte')}
 };
 $('products').onclick=e=>{
- const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess]');
+ const b=e.target.closest('[data-cut],[data-send],[data-blocked],[data-returnprocess],[data-replacement]');
  if(b?.dataset.cut)openCut(b.dataset.cut);
  if(b?.dataset.send)openSend(b.dataset.send);
+ if(b?.dataset.replacement)openReplacement(b.dataset.replacement);
  if(b?.dataset.returnprocess)openReturnProcess(b.dataset.returnprocess);
  if(b?.dataset.blocked){
   const stage=etapas.find(x=>x.id===b.dataset.blocked);
