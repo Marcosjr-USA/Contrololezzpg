@@ -221,6 +221,26 @@ body.admin-layout header{padding-left:270px}
 <p class="error" id="baixaErro" role="alert" aria-live="polite"></p>
 <div class="buttons"><button type="submit" id="baixaSalvar">Confirmar baixa</button><button type="button" class="secondary" id="baixaCancelar">Cancelar</button></div>
 </form></dialog>
+<dialog id="editarServicoDialog" aria-labelledby="editarServicoTitulo" class="baixa-dialog" style="width:min(680px,calc(100% - 24px))">
+<form id="editarServicoForm" novalidate>
+<div class="baixa-top"><h2 id="editarServicoTitulo">Editar serviço</h2><button type="button" class="secondary" id="editarServicoFechar">Fechar</button></div>
+<p class="muted">Corrija os dados do serviço, inclusive a facção responsável, sem excluir o lançamento.</p>
+<label>Prestador / facção responsável<select id="editarServicoPrestador" required></select></label>
+<label>Descrição do serviço<input id="editarServicoDescricao" maxlength="500" required></label>
+<div class="grid">
+<label>Quantidade total de peças<input id="editarServicoQuantidade" type="number" min="1" step="1" required></label>
+<label>Data de saída<input id="editarServicoSaida" type="date" required></label>
+</div>
+<label>Previsão de devolução<input id="editarServicoPrevisao" type="date" required></label>
+<label>Observações<textarea id="editarServicoObs" rows="3"></textarea></label>
+<p id="editarServicoResumo" class="muted"></p>
+<p id="editarServicoAviso" class="muted"></p>
+<div id="editarServicoConfirmacaoArea" class="hidden" style="padding:12px;border:1px solid #e7c786;border-radius:9px;margin:10px 0">
+<label style="display:flex;gap:9px;align-items:flex-start"><input type="checkbox" id="editarServicoConfirmacao" style="width:auto;margin:4px 0 0">
+Estou ciente de que as devoluções anteriores deste serviço passarão a constar nos relatórios do novo prestador.</label></div>
+<p id="editarServicoErro" role="alert" aria-live="polite" class="error"></p>
+<div class="buttons"><button id="editarServicoSalvar" type="submit">Salvar alterações</button><button type="button" class="secondary" id="editarServicoCancelar">Cancelar</button></div>
+</form></dialog>
 <script>
 const URL_SUPABASE="https://uzlmqwzneovxemnpssab.supabase.co",CHAVE_PUBLICA="sb_publishable_X5qkawe4rlrznwCv-cLL6w_1T2Znw0J";
 const $=x=>document.getElementById(x);const today=()=>new Date().toLocaleDateString('en-CA');const fmt=x=>x?x.split('-').reverse().join('/'):'';
@@ -610,19 +630,92 @@ async function editarPrestador(id){
   if(!/^\d+$/.test(prazo))return alert('Prazo inválido.');
   await atualizarRegistro('prestadores',id,{nome:nome.trim(),telefone,endereco,prazo_dias:Number(prazo)});
 }
-async function editarServico(id){
-  const v=s.find(x=>x.id===id);if(!v)return;
-  const descricao=prompt('Descrição do serviço:',v.descricao);if(descricao===null)return;
-  if(!descricao.trim())return alert('Descrição obrigatória.');
-  const quantidade=prompt('Quantidade total de peças:',String(v.quantidade));if(quantidade===null)return;
-  const devolvidas=b.filter(x=>x.servico_id===id).reduce((t,x)=>t+x.quantidade,0);
-  if(!/^\d+$/.test(quantidade)||Number(quantidade)<1||Number(quantidade)<devolvidas)return alert('Quantidade inválida ou menor que as peças já devolvidas.');
-  const saida=prompt('Data de saída (AAAA-MM-DD):',v.data_saida);if(saida===null)return;
-  const prevista=prompt('Previsão de devolução (AAAA-MM-DD):',v.data_prevista);if(prevista===null)return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(saida)||!/^\d{4}-\d{2}-\d{2}$/.test(prevista)||prevista<saida)return alert('Datas inválidas.');
-  if(b.some(x=>x.servico_id===id&&x.data_retorno<saida))return alert('A saída não pode ser posterior a uma baixa já registrada.');
-  const observacoes=prompt('Observações:',v.observacoes||'');if(observacoes===null)return;
-  await atualizarRegistro('servicos',id,{descricao:descricao.trim(),quantidade:Number(quantidade),data_saida:saida,data_prevista:prevista,observacoes});
+let servicoEmEdicao=null;
+function editarServico(id){
+ const v=s.find(x=>String(x.id)===String(id));
+ if(!v)return;
+ servicoEmEdicao=String(v.id);
+ const select=$('editarServicoPrestador');
+ select.innerHTML=p.filter(pr=>pr.ativo||pr.id===v.prestador_id)
+  .map(pr=>'<option value="'+esc(pr.id)+'">'+esc(pr.nome)+(pr.ativo?'':' (inativo)')+'</option>').join('');
+ select.value=v.prestador_id;
+ $('editarServicoDescricao').value=v.descricao||'';
+ $('editarServicoQuantidade').value=String(v.quantidade);
+ $('editarServicoSaida').value=v.data_saida||'';
+ $('editarServicoPrevisao').value=v.data_prevista||'';
+ $('editarServicoObs').value=v.observacoes||'';
+ const devolvidas=b.filter(x=>x.servico_id===v.id).reduce((t,x)=>t+Number(x.quantidade),0);
+ $('editarServicoQuantidade').min=String(Math.max(1,devolvidas));
+ $('editarServicoResumo').textContent='Peças devolvidas: '+devolvidas+
+   ' · Pendentes: '+pendente(v)+'. A quantidade total nunca poderá ser menor que as já devolvidas.';
+ $('editarServicoAviso').textContent=devolvidas>0?
+  'Atenção: este serviço já possui devoluções. Alterar o prestador também altera a atribuição dessas devoluções nos relatórios por prestador.':'';
+ $('editarServicoConfirmacao').checked=false;
+ $('editarServicoConfirmacaoArea').classList.add('hidden');
+ $('editarServicoErro').textContent='';
+ atualizarAlertaEdicaoServico();
+ $('editarServicoDialog').showModal();
+}
+function atualizarAlertaEdicaoServico(){
+ const v=s.find(x=>String(x.id)===servicoEmEdicao);if(!v)return;
+ const trocou=$('editarServicoPrestador').value!==v.prestador_id;
+ const possuiBaixas=b.some(x=>x.servico_id===v.id);
+ $('editarServicoConfirmacaoArea').classList.toggle('hidden',!(trocou&&possuiBaixas));
+ if(!(trocou&&possuiBaixas))$('editarServicoConfirmacao').checked=false;
+}
+function fecharEditarServico(){
+ if($('editarServicoSalvar').disabled)return;
+ $('editarServicoDialog').close();
+ servicoEmEdicao=null;
+}
+async function salvarEdicaoServico(ev){
+ ev.preventDefault();
+ const aviso=$('editarServicoErro'),btn=$('editarServicoSalvar');
+ aviso.textContent='';
+ const v=s.find(x=>String(x.id)===servicoEmEdicao);
+ if(!v||!session){aviso.textContent='Sessão ou serviço inválido. Atualize a página.';return}
+ const prestador=$('editarServicoPrestador').value,
+   descricao=$('editarServicoDescricao').value.trim(),
+   quantidade=Number($('editarServicoQuantidade').value),
+   saida=$('editarServicoSaida').value,
+   prevista=$('editarServicoPrevisao').value,
+   observacoes=$('editarServicoObs').value.trim(),
+   devolucoes=b.filter(x=>x.servico_id===v.id),
+   devolvidas=devolucoes.reduce((n,x)=>n+Number(x.quantidade),0),
+   diferente=prestador!==v.prestador_id;
+ if(!p.some(pr=>pr.id===prestador&&(pr.ativo||pr.id===v.prestador_id))){
+  aviso.textContent='Selecione um prestador válido.';return
+ }
+ if(!descricao){aviso.textContent='Informe a descrição do serviço.';return}
+ if(!Number.isSafeInteger(quantidade)||quantidade<1||quantidade<devolvidas){
+  aviso.textContent='A quantidade deve ser igual ou maior que '+Math.max(1,devolvidas)+' peça(s).';return
+ }
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(saida)||!/^\d{4}-\d{2}-\d{2}$/.test(prevista)||prevista<saida){
+  aviso.textContent='Verifique a data de saída e a previsão de devolução.';return
+ }
+ if(devolucoes.some(x=>x.data_retorno<saida)){
+  aviso.textContent='A data de saída não pode ser posterior a uma devolução já registrada.';return
+ }
+ if(diferente&&devolvidas>0&&!$('editarServicoConfirmacao').checked){
+  atualizarAlertaEdicaoServico();
+  aviso.textContent='Confirme a mudança de prestador em um serviço que já recebeu baixas.';return
+ }
+ const changes={prestador_id:prestador,descricao,quantidade,
+  data_saida:saida,data_prevista:prevista,observacoes};
+ if(Object.entries(changes).every(([k,val])=>val===(v[k]??''))){
+  aviso.textContent='Nenhum campo foi alterado.';return
+ }
+ btn.disabled=true;btn.textContent='Salvando alterações...';
+ try{
+  const {data,error}=await client.from('servicos').update(changes).eq('id',v.id).select('id');
+  if(error)throw error;
+  if(!data?.length)throw new Error('Sem permissão para editar este registro.');
+  $('editarServicoDialog').close();
+  servicoEmEdicao=null;
+  await carregar();
+  status('Serviço atualizado com sucesso. Alterações registradas no histórico.');
+ }catch(err){aviso.textContent='Não foi possível editar: '+err.message}
+ finally{btn.disabled=false;btn.textContent='Salvar alterações'}
 }
 let eventosAuditoria=[];
 function auditoriaContexto(x){
@@ -723,7 +816,10 @@ function gerar(ev){
  const total=dados.reduce((t,x)=>t+Number(x.quantidade||0),0);
  $('report').innerHTML='<h3>Fechamento por devolução · '+fmt(ini)+' a '+fmt(fim)+'</h3>'+(linhas||'<p>Nenhuma devolução encontrada no período.</p>')+'<h3>Total geral: '+total+' peça(s) devolvida(s)</h3><p class="muted">Cada devolução parcial é contabilizada na data em que ocorreu. Peças ainda pendentes não entram neste fechamento.</p>';
 }
-function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('baixaForm').addEventListener('submit',confirmarBaixa);
+function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('baixaForm').addEventListener('submit',confirmarBaixa);$('editarServicoForm').addEventListener('submit',salvarEdicaoServico);
+ $('editarServicoFechar').addEventListener('click',fecharEditarServico);
+ $('editarServicoCancelar').addEventListener('click',fecharEditarServico);
+ $('editarServicoPrestador').addEventListener('change',atualizarAlertaEdicaoServico);
  $('baixaFechar').addEventListener('click',fecharBaixa);
  $('baixaCancelar').addEventListener('click',fecharBaixa);
  $('baixaDialog').addEventListener('close',()=>{if(!$('baixaSalvar').disabled)baixaSelecionada=null});$('fcadastro').addEventListener('submit',cadastrarConta);$('fp').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);salvarTabela('prestadores',{nome:f.get('nome'),telefone:f.get('telefone'),endereco:f.get('endereco'),prazo_dias:Number(f.get('prazo_dias'))},ev.target)});$('fs').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);if(f.get('data_prevista')<f.get('data_saida'))return alert('Prazo não pode ser anterior à saída');salvarTabela('servicos',{prestador_id:f.get('prestador_id'),descricao:f.get('descricao'),quantidade:Number(f.get('quantidade')),data_saida:f.get('data_saida'),data_prevista:f.get('data_prevista'),observacoes:f.get('observacoes'),criado_por:session.user.id},ev.target)});$('prestadorSelect').addEventListener('change',()=>{let pr=p.find(x=>x.id===$('prestadorSelect').value);if(pr)$('previsao').value=addDays($('saida').value||today(),pr.prazo_dias)});$('saida').addEventListener('change',()=>$('prestadorSelect').dispatchEvent(new Event('change')));$('lotePrestador').addEventListener('change',atualizarPrevisaoLote);
