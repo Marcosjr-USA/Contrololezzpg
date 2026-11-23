@@ -310,7 +310,7 @@ function abrirPesquisaFiltrada(filtro){
 function renderPesquisa(){
  if(!$('pesquisaResultados'))return;
  const termo=normalizarPesquisa($('pesquisaTermo').value),filtro=$('pesquisaStatus').value;
- const palavras=termo.split(/\\s+/).filter(Boolean);
+ const palavras=termo.split(/\s+/).filter(Boolean);
  const encontrados=s.filter(v=>{
    const pr=p.find(x=>x.id===v.prestador_id);
    const texto=normalizarPesquisa([v.descricao,pr?.nome,v.observacoes,v.observacao].join(' '));
