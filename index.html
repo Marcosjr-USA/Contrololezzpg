@@ -154,7 +154,13 @@ body.admin-layout header{padding-left:270px}
 @media(max-width:1000px){.mod2-duas{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:800px){.mod2-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mod2-duas{grid-template-columns:minmax(0,1fr)!important}#dashSeletor{display:block}#dashSeletor select{width:100%;margin-top:5px}.mod2-anel{width:170px;height:170px}}
 @media(max-width:380px){.mod2-kpis{grid-template-columns:minmax(0,1fr)}.mod2-acoes{grid-template-columns:minmax(0,1fr)}}
-.pesquisa-controles{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;align-items:end;margin:14px 0}.pesquisa-controles label{min-width:0}.pesquisa-controles input,.pesquisa-controles select{width:100%;box-sizing:border-box}.pesquisa-item{padding:14px 0;border-bottom:1px solid #e6e8ed;overflow-wrap:anywhere}.pesquisa-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pesquisa-situacao{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700}.pesquisa-situacao.finalizado{background:#dff5e6;color:#167538}.pesquisa-situacao.producao{background:#e3edff;color:#2056b3}.pesquisa-situacao.atrasado{background:#ffe1e4;color:#b92130}#pesquisaResumo{margin:10px 0}@media(max-width:600px){.pesquisa-controles{grid-template-columns:1fr}}.servico-destaque{outline:3px solid #ba1d30;border-radius:8px;background:#fff3f5;scroll-margin-top:70px}\n</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
+.pesquisa-controles{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;align-items:end;margin:14px 0}.pesquisa-controles label{min-width:0}.pesquisa-controles input,.pesquisa-controles select{width:100%;box-sizing:border-box}.pesquisa-item{padding:14px 0;border-bottom:1px solid #e6e8ed;overflow-wrap:anywhere}.pesquisa-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pesquisa-situacao{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700}.pesquisa-situacao.finalizado{background:#dff5e6;color:#167538}.pesquisa-situacao.producao{background:#e3edff;color:#2056b3}.pesquisa-situacao.atrasado{background:#ffe1e4;color:#b92130}#pesquisaResumo{margin:10px 0}@media(max-width:600px){.pesquisa-controles{grid-template-columns:1fr}}.servico-destaque{outline:3px solid #ba1d30;border-radius:8px;background:#fff3f5;scroll-margin-top:70px}\n.grupo-atrasos{margin:18px 0 26px;border:1px solid #dce2eb;border-radius:12px;overflow:hidden;background:#fff}
+.grupo-atrasos-titulo{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:14px 16px;background:#f5f6fa;border-bottom:1px solid #dce2eb}
+.grupo-atrasos-titulo span{color:#526783;font-size:.92rem}
+.grupo-atrasos .pesquisa-item{margin:0;padding:14px 16px}
+.grupo-atrasos .pesquisa-item+.pesquisa-item{border-top:1px solid #e6eaf0}
+#pesquisa{scroll-margin-top:16px}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><div class="marca-topo"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes" class="logo-header"><div><h1>Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></div></div></header><main>
 <div id="login" class="card"><div class="login-marca"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="Logomarca ZZIPING Uniformes" class="logo-login"></div><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
 <div id="app" class="hidden"><button id="abrirMenuAdmin" class="secondary hidden no-print" onclick="alternarMenuAdmin()" aria-label="Abrir menu administrativo" aria-expanded="false">☰ Menu</button><aside id="menuAdmin" class="hidden no-print" aria-label="Menu administrativo"><button id="fecharMenuAdmin" type="button" onclick="alternarMenuAdmin()" aria-label="Fechar menu">✕ &nbsp; Fechar menu</button><div class="admin-side-brand"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes"></div><div class="admin-side-label">NAVEGAÇÃO</div><button data-tab="painel" onclick="tab('painel')">▦ &nbsp; Dashboard</button><button data-tab="pesquisa" onclick="tab('pesquisa')">⌕ &nbsp; Pesquisar</button><button data-tab="servicos" onclick="tab('servicos')">▤ &nbsp; Serviços</button><button data-tab="prestadores" onclick="tab('prestadores')">♟ &nbsp; Prestadores</button><button data-tab="relatorios" onclick="tab('relatorios')">▥ &nbsp; Relatórios</button><button id="menuAuditoria" data-tab="auditoria" onclick="tab('auditoria')">◴ &nbsp; Histórico</button><button id="menuUsuarios" data-tab="usuarios" onclick="tab('usuarios')">♙ &nbsp; Usuários</button><div class="admin-side-label admin-side-divider">AÇÕES RÁPIDAS</div><button class="admin-side-action" onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ &nbsp; Novo serviço</button><button class="admin-side-action" onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">＋ &nbsp; Novo prestador</button><button class="admin-side-action" onclick="tab('relatorios')">▤ &nbsp; Relatório do período</button><div class="admin-side-bottom"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING"></div></aside><div class="buttons no-print"><small id="usuario"></small><button class="secondary" onclick="sair()">Sair</button></div><nav id="navPadrao"><button onclick="tab('painel')">Painel</button><button onclick="tab('servicos')">Serviços</button><button onclick="tab('prestadores')">Prestadores</button><button onclick="tab('relatorios')">Relatórios</button><button onclick="tab('auditoria')">Histórico</button><button id="navUsuarios" class="hidden" onclick="tab('usuarios')">Usuários</button></nav><p id="status" class="muted"></p>
@@ -164,7 +170,7 @@ body.admin-layout header{padding-left:270px}
 <div class="mod2-duas"><div class="card"><h2>◉ Serviços por status</h2><div id="mod2Status" class="mod2-status"></div></div><div class="card"><h2>↗ Evolução da produção</h2><p class="muted">Quantidade de serviços enviados por dia no período selecionado</p><div id="mod2Evolucao" class="mod2-evolucao"></div></div></div>
 <div class="mod2-duas"><div class="card"><div class="mod2-titulo"><h2>▤ Serviços recentes</h2><button class="secondary" onclick="tab('servicos')">Ver todos</button></div><div id="mod2Recentes"></div></div><div class="card"><h2>♧ Alertas e pendências</h2><div id="mod2Alertas"></div><h2>⚡ Ações rápidas</h2><div class="mod2-acoes"><button onclick="tab('servicos');document.querySelector('#fs input[name=descricao]').focus()">＋ Novo serviço</button><button onclick="tab('prestadores');document.querySelector('#fp input[name=nome]').focus()">♟ Novo prestador</button><button class="secondary" onclick="tab('relatorios')">▥ Relatórios</button><button class="secondary" onclick="tab('usuarios')">♙ Usuários</button></div></div></div>
 </div><div id="painelBasico"><div class="grid"><div class="metric">Serviços em aberto<strong id="nAbertos">0</strong></div><div class="metric">Serviços atrasados<strong id="nAtrasados">0</strong></div><div class="metric">Peças pendentes<strong id="nPecas">0</strong></div><div class="metric">Finalizados<strong id="nFinalizados">0</strong></div></div><div class="card"><h2>Serviços em aberto</h2><div id="pendentes"></div></div></div></section>
-<section id="pesquisa" class="hidden"><div class="card"><h2>⌕ Pesquisa de pedidos</h2><p class="muted">Encontre serviços em produção ou finalizados pelo nome, descrição ou prestador. Exemplo: matriz encontra “Silk Matriz” e “Polo Matriz”.</p><div class="pesquisa-controles"><label>O que deseja pesquisar?<input id="pesquisaTermo" type="search" placeholder="Digite um nome, ex.: matriz" oninput="renderPesquisa()" autocomplete="off"></label><label>Situação<select id="pesquisaStatus" onchange="renderPesquisa()"><option value="todos">Todos os pedidos</option><option value="andamento">Em produção / pendentes</option><option value="finalizado">Finalizados</option></select></label></div><div id="pesquisaResumo" class="muted" aria-live="polite"></div><div id="pesquisaResultados"></div></div></section><section id="prestadores" class="hidden"><div class="card"><h2>Cadastrar prestador</h2><form id="fp"><label>Nome<input name="nome" required></label><label>Telefone<input name="telefone" type="tel"></label><label>Endereço<input name="endereco"></label><label>Prazo padrão em dias<input name="prazo_dias" type="number" min="0" value="5" required></label><button>Cadastrar prestador</button></form></div><div class="card"><h2>Prestadores cadastrados</h2><div id="listaPrestadores"></div></div></section>
+<section id="pesquisa" class="hidden"><div class="card"><h2>⌕ Pesquisa de pedidos</h2><p class="muted">Encontre serviços em produção ou finalizados pelo nome, descrição ou prestador. Exemplo: matriz encontra “Silk Matriz” e “Polo Matriz”.</p><div class="pesquisa-controles"><label>O que deseja pesquisar?<input id="pesquisaTermo" type="search" placeholder="Digite um nome, ex.: matriz" oninput="renderPesquisa()" autocomplete="off"></label><label>Situação<select id="pesquisaStatus" onchange="renderPesquisa()"><option value="todos">Todos os pedidos</option><option value="andamento">Em produção / pendentes</option><option value="atrasado">Somente atrasados</option><option value="parcial">Devolução parcial</option><option value="pendentes">Todos com peças pendentes</option><option value="finalizado">Finalizados</option></select></label></div><div id="pesquisaResumo" class="muted" aria-live="polite"></div><div id="pesquisaResultados"></div></div></section><section id="prestadores" class="hidden"><div class="card"><h2>Cadastrar prestador</h2><form id="fp"><label>Nome<input name="nome" required></label><label>Telefone<input name="telefone" type="tel"></label><label>Endereço<input name="endereco"></label><label>Prazo padrão em dias<input name="prazo_dias" type="number" min="0" value="5" required></label><button>Cadastrar prestador</button></form></div><div class="card"><h2>Prestadores cadastrados</h2><div id="listaPrestadores"></div></div></section>
 <section id="servicos" class="hidden"><div class="card"><h2>Novo serviço</h2><form id="fs"><label>Prestador<select name="prestador_id" id="prestadorSelect" required></select></label><label>Descrição<input name="descricao" required></label><label>Quantidade de peças<input name="quantidade" type="number" min="1" required></label><label>Data de saída<input name="data_saida" id="saida" type="date" required></label><label>Previsão de devolução<input name="data_prevista" id="previsao" type="date" required></label><label>Observações<textarea name="observacoes"></textarea></label><button>Registrar saída</button></form></div><div class="card"><h2>Histórico de serviços</h2><div id="todos"></div></div></section>
 <section id="relatorios" class="hidden"><div class="card"><h2>Fechamento mensal por devolução</h2><p class="muted">Conta apenas as peças efetivamente devolvidas dentro do período, independentemente da data de envio.</p><form id="fr"><label>Prestador<select id="relPrestador"></select></label><label>Data inicial<input id="inicio" type="date" required></label><label>Data final<input id="fim" type="date" required></label><button>Gerar relatório</button></form><div id="report"></div><p><button class="secondary no-print" onclick="window.print()">Imprimir / salvar PDF</button></p></div></section><section id="auditoria" class="hidden"><div class="card"><h2>Histórico de operações</h2><p class="muted">Quem lançou, editou ou registrou devoluções. Os eventos começam após a ativação do SQL de auditoria.</p><div class="audit-filters">
 <label>Prestador<select id="audPrestador" onchange="filtrarAuditoria()"><option value="">Todos</option></select></label>
@@ -273,7 +279,7 @@ function renderDashboardMod2(){
  const vencidos=s.filter(v=>mod2Categoria(v)==='atrasado');
  const parciais=s.filter(v=>mod2Categoria(v)==='aguardando');
  const pecas=s.filter(v=>pendente(v)>0).reduce((a,v)=>a+pendente(v),0);
- $('mod2Alertas').innerHTML='<div class="mod2-alerta"><span>⚠</span><div><b>'+vencidos.length+' serviço(s) atrasado(s)</b><small>Prazo de devolução ultrapassado</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div><div class="mod2-alerta"><span>◷</span><div><b>'+parciais.length+' devolução(ões) parcial(is)</b><small>Serviços com peças ainda pendentes</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div><div class="mod2-alerta"><span>▤</span><div><b>'+pecas+' peça(s) pendente(s)</b><small>Saldo total em aberto</small></div><button class="secondary" onclick="tab(\'servicos\')">Ver</button></div>';
+ $('mod2Alertas').innerHTML='<div class="mod2-alerta"><span>⚠</span><div><b>'+vencidos.length+' serviço(s) atrasado(s)</b><small>Prazo de devolução ultrapassado</small></div><button class="secondary" onclick="abrirPesquisaFiltrada(\'atrasado\')">Ver</button></div><div class="mod2-alerta"><span>◷</span><div><b>'+parciais.length+' devolução(ões) parcial(is)</b><small>Serviços com peças ainda pendentes</small></div><button class="secondary" onclick="abrirPesquisaFiltrada(\'parcial\')">Ver</button></div><div class="mod2-alerta"><span>▤</span><div><b>'+pecas+' peça(s) pendente(s)</b><small>Saldo total em aberto</small></div><button class="secondary" onclick="abrirPesquisaFiltrada(\'pendentes\')">Ver</button></div>';
 }
 
 function renderDashboard(){
@@ -291,23 +297,68 @@ function renderDashboard(){
 function normalizarPesquisa(texto){
  return String(texto??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
+function abrirPesquisaFiltrada(filtro){
+ $('pesquisaTermo').value='';
+ $('pesquisaStatus').value=filtro;
+ tabAtual='pesquisa';
+ atualizarMenuAdmin();
+ for(const aba of ['painel','pesquisa','servicos','prestadores','relatorios','auditoria','usuarios'])
+  $(aba).classList.toggle('hidden',aba!=='pesquisa');
+ renderPesquisa();
+ $('pesquisa').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function renderPesquisa(){
  if(!$('pesquisaResultados'))return;
  const termo=normalizarPesquisa($('pesquisaTermo').value),filtro=$('pesquisaStatus').value;
- const palavras=termo.split(/\s+/).filter(Boolean);
+ const palavras=termo.split(/\\s+/).filter(Boolean);
  const encontrados=s.filter(v=>{
    const pr=p.find(x=>x.id===v.prestador_id);
    const texto=normalizarPesquisa([v.descricao,pr?.nome,v.observacoes,v.observacao].join(' '));
    if(!palavras.every(palavra=>texto.includes(palavra)))return false;
    const aberto=pendente(v)>0;
-   return filtro==='todos'||(filtro==='andamento'&&aberto)||(filtro==='finalizado'&&!aberto);
+   const parcial=aberto&&b.some(x=>x.servico_id===v.id);
+   switch(filtro){
+    case 'andamento':case 'pendentes':return aberto;
+    case 'atrasado':return aberto&&v.data_prevista<today();
+    case 'parcial':return parcial;
+    case 'finalizado':return !aberto;
+    default:return true;
+   }
  });
- $('pesquisaResumo').textContent=encontrados.length+' pedido(s) encontrado(s)'+(termo?' para "'+$('pesquisaTermo').value.trim()+'"':'')+'.';
- $('pesquisaResultados').innerHTML=encontrados.length?encontrados.map(v=>{
+ if(filtro==='atrasado')encontrados.sort((a,b)=>a.prestador_id===b.prestador_id?
+   a.data_prevista.localeCompare(b.data_prevista):
+   (p.find(x=>x.id===a.prestador_id)?.nome||'').localeCompare(p.find(x=>x.id===b.prestador_id)?.nome||'','pt-BR'));
+ const nomes={atrasado:'atrasados',parcial:'com devolução parcial',pendentes:'com peças pendentes',andamento:'em produção',finalizado:'finalizados'};
+ const totalPecas=encontrados.reduce((n,v)=>n+Math.max(0,pendente(v)),0);
+ $('pesquisaResumo').textContent=encontrados.length+' serviço(s) '+(nomes[filtro]||'encontrado(s)')+
+   (termo?' para "'+$('pesquisaTermo').value.trim()+'"':'')+
+   (filtro==='atrasado'?' · '+totalPecas+' peça(s) atrasada(s) · agrupados por prestador':'')+'.';
+ const renderItem=v=>{
   const pr=p.find(x=>x.id===v.prestador_id),saldo=pendente(v);
   const status=saldo===0?'Finalizado':v.data_prevista<today()?'Atrasado':'Em produção';
-  return '<div class="pesquisa-item"><div class="pesquisa-item-top"><b>'+esc(v.descricao)+'</b><span class="pesquisa-situacao '+(saldo===0?'finalizado':status==='Atrasado'?'atrasado':'producao')+'">'+status+'</span></div><div class="muted">Prestador: '+esc(pr?.nome||'Não informado')+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Previsão: '+fmt(v.data_prevista)+'</div><div class="muted">Quantidade: '+Number(v.quantidade)+' · Pendentes: '+saldo+'</div>'+acoesDiretasServico(v)+'</div>';
- }).join(''):'<p class="muted">Nenhum pedido encontrado. Experimente outro nome ou selecione “Todos os pedidos”.</p>';
+  return '<div class="pesquisa-item"><div class="pesquisa-item-top"><b>'+esc(v.descricao)+'</b><span class="pesquisa-situacao '+
+   (saldo===0?'finalizado':status==='Atrasado'?'atrasado':'producao')+'">'+status+'</span></div>'+
+   '<div class="muted">Prestador: '+esc(pr?.nome||'Não informado')+'</div>'+
+   '<div class="muted">Saída: '+fmt(v.data_saida)+' · Previsão: '+fmt(v.data_prevista)+'</div>'+
+   '<div class="muted">Quantidade: '+Number(v.quantidade)+' · Pendentes: '+saldo+'</div>'+
+   acoesDiretasServico(v)+'</div>';
+ };
+ if(!encontrados.length){
+  $('pesquisaResultados').innerHTML='<p class="muted">Nenhum serviço encontrado para este filtro.</p>';
+  return;
+ }
+ if(filtro==='atrasado'){
+  const grupos=new Map();
+  for(const v of encontrados){
+   const pr=p.find(x=>x.id===v.prestador_id),key=v.prestador_id||'sem-prestador';
+   if(!grupos.has(key))grupos.set(key,{nome:pr?.nome||'Não informado',items:[]});
+   grupos.get(key).items.push(v);
+  }
+  $('pesquisaResultados').innerHTML=[...grupos.values()].map(g=>
+   '<section class="grupo-atrasos"><div class="grupo-atrasos-titulo"><strong>'+esc(g.nome)+'</strong>'+
+   '<span>'+g.items.length+' serviço(s) · '+g.items.reduce((n,v)=>n+Math.max(0,pendente(v)),0)+' peça(s) pendentes</span></div>'+
+   g.items.map(renderItem).join('')+'</section>').join('');
+ }else $('pesquisaResultados').innerHTML=encontrados.map(renderItem).join('');
 }
 function descricao(v){let pr=p.find(x=>x.id===v.prestador_id),q=pendente(v),atrasado=q>0&&v.data_prevista<today();return '<div class="line" data-servico-id="'+esc(String(v.id))+'"><b>'+esc(pr?.nome||'Prestador')+'</b> '+(atrasado?'<span class="badge danger">Atrasado</span>':q===0?'<span class="badge">Finalizado</span>':'')+'<div>'+esc(v.descricao)+'</div><div class="muted">Saída: '+fmt(v.data_saida)+' · Prazo: '+fmt(v.data_prevista)+' · '+q+' de '+v.quantidade+' peças pendentes</div>'+'<p class="buttons">'+(q?'<button class="secondary" onclick="darBaixa(\''+v.id+'\')">Dar baixa</button>':'')+'<button class="secondary" onclick="editarServico(\''+v.id+'\')">Editar serviço</button>'+botaoExcluir('servicos',v.id)+'</p></div>'}
 function render(){options();renderPesquisa();atualizarDashboards();const abertos=s.filter(v=>pendente(v)>0);$('nAbertos').textContent=abertos.length;$('nAtrasados').textContent=abertos.filter(v=>v.data_prevista<today()).length;$('nPecas').textContent=abertos.reduce((t,v)=>t+pendente(v),0);$('nFinalizados').textContent=s.length-abertos.length;$('pendentes').innerHTML=abertos.map(descricao).join('')||'<p class="muted">Sem pendências.</p>';$('todos').innerHTML=s.map(descricao).join('')||'<p class="muted">Nenhum serviço cadastrado.</p>';$('listaPrestadores').innerHTML=p.map(v=>'<div class="line"><b>'+esc(v.nome)+'</b><div class="muted">'+esc(v.telefone)+' · Prazo: '+v.prazo_dias+' dias · '+esc(v.endereco)+'</div><p><button class="secondary" onclick="editarPrestador(\''+v.id+'\')">Editar prestador</button>'+botaoExcluir('prestadores',v.id)+'</p></div>').join('')||'<p class="muted">Nenhum prestador cadastrado.</p>';renderDashboard()}
