@@ -165,6 +165,12 @@ body.admin-layout header{padding-left:270px}
 .lote-item-cabecalho{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .lote-item textarea{min-height:48px}
 @media(max-width:600px){#flote .grid{grid-template-columns:1fr}.lote-item{padding:11px}}
+.baixa-dialog{width:min(530px,calc(100% - 24px));max-height:90vh;overflow:auto;padding:22px;border:1px solid #d6dfeb;border-radius:14px;box-shadow:0 12px 55px #0004;color:#17314c;background:#fff}
+.baixa-dialog::backdrop{background:#15283f96}
+.baixa-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.baixa-top h2{margin:0}
+.baixa-dialog .buttons{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:560px){.baixa-dialog .grid{grid-template-columns:1fr}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script></head>
 <body><header><div class="marca-topo"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-clara.png.png" alt="ZZIPING Uniformes" class="logo-header"><div><h1>Controle de Serviços</h1><small>ZZIPING Uniformes · Produção e devoluções</small></div></div></header><main>
 <div id="login" class="card"><div class="login-marca"><img src="https://raw.githubusercontent.com/Marcosjr-USA/Contrololezzpg/main/logo-colorida.png.png" alt="Logomarca ZZIPING Uniformes" class="logo-login"></div><h2>Entrar no sistema</h2><p class="muted">Acesso para funcionários autorizados. Solicite seu usuário ao administrador.</p><form id="flogin"><label>E-mail<input id="email" type="email" autocomplete="username" required></label><label>Senha<input id="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form><p id="loginmsg" class="error"></p><details><summary>Sou novo funcionário — solicitar acesso</summary><form id="fcadastro"><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Crie uma senha (mínimo 6 caracteres)<input name="senha" type="password" minlength="6" required autocomplete="new-password"></label><button type="submit">Criar conta e solicitar aprovação</button></form><p id="cadastromsg" class="muted"></p></details></div>
@@ -203,6 +209,18 @@ body.admin-layout header{padding-left:270px}
 <label>De<input id="audInicio" type="date" onchange="filtrarAuditoria()"></label>
 <label>Até<input id="audFim" type="date" onchange="filtrarAuditoria()"></label>
 </div><div class="buttons"><button class="secondary no-print" onclick="carregarAuditoria()">Atualizar histórico</button><button class="secondary no-print" onclick="limparFiltrosAuditoria()">Limpar filtros</button></div><p id="audTotal" class="muted"></p><div id="listaAuditoria"></div></div></section><section id="usuarios" class="hidden"><div class="card"><h2>Gerenciar usuários</h2><p class="muted">Apenas o administrador principal pode aprovar, bloquear e reativar contas.</p><button class="secondary" onclick="carregarUsuarios()">Atualizar lista</button><p id="usuariosMsg" class="muted"></p><div id="listaUsuarios"></div></div></section></div></main>
+<dialog id="baixaDialog" aria-labelledby="baixaTitulo" class="baixa-dialog">
+<form id="baixaForm" novalidate>
+<div class="baixa-top"><h2 id="baixaTitulo">Registrar devolução</h2><button class="secondary" type="button" id="baixaFechar">Fechar</button></div>
+<div id="baixaServico" class="muted"></div>
+<div class="grid">
+<label>Peças devolvidas<input id="baixaQuantidade" name="quantidade" type="number" min="1" step="1" required></label>
+<label>Data da devolução<input id="baixaData" name="data_retorno" type="date" required></label>
+</div>
+<p class="muted">O padrão é dar baixa em todas as peças pendentes. Para uma devolução parcial, altere somente a quantidade.</p>
+<p class="error" id="baixaErro" role="alert" aria-live="polite"></p>
+<div class="buttons"><button type="submit" id="baixaSalvar">Confirmar baixa</button><button type="button" class="secondary" id="baixaCancelar">Cancelar</button></div>
+</form></dialog>
 <script>
 const URL_SUPABASE="https://uzlmqwzneovxemnpssab.supabase.co",CHAVE_PUBLICA="sb_publishable_X5qkawe4rlrznwCv-cLL6w_1T2Znw0J";
 const $=x=>document.getElementById(x);const today=()=>new Date().toLocaleDateString('en-CA');const fmt=x=>x?x.split('-').reverse().join('/'):'';
@@ -513,7 +531,66 @@ async function mostrar(sess){
 }
 async function sair(){await client.auth.signOut();mostrar(null);p=[];s=[];b=[]}
 async function salvarTabela(table,data,form){const btn=form?.querySelector('button');if(btn)btn.disabled=true;try{const {error}=await client.from(table).insert(data);if(error)throw error;if(form){form.reset();if($('saida'))$('saida').value=today();}await carregar();alert('Registro salvo online.')}catch(e){alert('Não foi possível salvar: '+e.message)}finally{if(btn)btn.disabled=false}}
-async function darBaixa(id){const v=s.find(x=>x.id===id);if(!v)return;const restante=pendente(v);let q=prompt('Quantidade devolvida (máximo '+restante+'):',String(restante));if(q===null)return;q=Number(q);if(!Number.isInteger(q)||q<1||q>restante)return alert('Quantidade inválida');let data=prompt('Data da devolução (AAAA-MM-DD):',today());if(data===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||data<v.data_saida||data>today())return alert('Data inválida');await salvarTabela('baixas',{servico_id:id,quantidade:q,data_retorno:data,registrado_por:session.user.id},null)}
+let baixaSelecionada=null;
+function darBaixa(id){
+ const v=s.find(x=>String(x.id)===String(id));if(!v)return;
+ const restante=pendente(v);
+ if(restante<=0){status('Este serviço já foi totalmente devolvido.',true);return}
+ baixaSelecionada=String(v.id);
+ $('baixaServico').textContent=v.descricao+' · '+(p.find(x=>x.id===v.prestador_id)?.nome||'Prestador')+
+  ' · Saldo pendente: '+restante+' peça(s)';
+ $('baixaQuantidade').max=String(restante);
+ $('baixaQuantidade').value=String(restante);
+ $('baixaData').min=v.data_saida;
+ $('baixaData').max=today();
+ $('baixaData').value=today();
+ $('baixaErro').textContent='';
+ $('baixaDialog').showModal();
+}
+function fecharBaixa(){
+ if($('baixaSalvar').disabled)return;
+ $('baixaDialog').close();
+ baixaSelecionada=null;
+}
+async function confirmarBaixa(ev){
+ ev.preventDefault();
+ const aviso=$('baixaErro'),btn=$('baixaSalvar');
+ aviso.textContent='';
+ if(!baixaSelecionada||!session?.user?.id){aviso.textContent='Sessão inválida. Entre novamente.';return}
+ const v=s.find(x=>String(x.id)===baixaSelecionada);
+ if(!v){aviso.textContent='Serviço não encontrado. Atualize os dados.';return}
+ const q=Number($('baixaQuantidade').value),saldo=pendente(v),data=$('baixaData').value;
+ if(!Number.isSafeInteger(q)||q<1||q>saldo){
+  aviso.textContent='Informe de 1 a '+saldo+' peça(s) devolvida(s).';return
+ }
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||data<v.data_saida||data>today()){
+  aviso.textContent='Informe uma data válida entre '+fmt(v.data_saida)+' e '+fmt(today())+'.';return
+ }
+ btn.disabled=true;btn.textContent='Salvando baixa...';
+ try{
+  // Atualiza o saldo antes de gravar, evitando reutilizar valores antigos na tela.
+  const {data:atual,error:erroAtual}=await client.from('servicos').select('id,quantidade,data_saida').eq('id',v.id).single();
+  if(erroAtual)throw erroAtual;
+  const {data:retornos,error:erroRetornos}=await client.from('baixas').select('quantidade').eq('servico_id',v.id);
+  if(erroRetornos)throw erroRetornos;
+  const restante=Number(atual.quantidade)-(retornos||[]).reduce((n,r)=>n+Number(r.quantidade),0);
+  if(q>restante)throw new Error('O saldo foi atualizado por outro usuário. Restam '+restante+' peça(s). Feche e abra a baixa novamente.');
+  if(data<atual.data_saida)throw new Error('A data é anterior à saída do serviço.');
+  const {error}=await client.from('baixas').insert({
+   servico_id:v.id,quantidade:q,data_retorno:data,registrado_por:session.user.id
+  });
+  if(error)throw error;
+  $('baixaDialog').close();
+  baixaSelecionada=null;
+  await carregar();
+  status('Baixa registrada: '+q+' peça(s) de '+v.descricao+'.');
+ }catch(e){
+  aviso.textContent='Não foi possível registrar a baixa: '+e.message;
+ }finally{
+  btn.disabled=false;btn.textContent='Confirmar baixa';
+ }
+}
+
 async function atualizarRegistro(tabela,id,dados){
   try{
     const {data,error}=await client.from(tabela).update(dados).eq('id',id).select('id');
@@ -646,7 +723,10 @@ function gerar(ev){
  const total=dados.reduce((t,x)=>t+Number(x.quantidade||0),0);
  $('report').innerHTML='<h3>Fechamento por devolução · '+fmt(ini)+' a '+fmt(fim)+'</h3>'+(linhas||'<p>Nenhuma devolução encontrada no período.</p>')+'<h3>Total geral: '+total+' peça(s) devolvida(s)</h3><p class="muted">Cada devolução parcial é contabilizada na data em que ocorreu. Peças ainda pendentes não entram neste fechamento.</p>';
 }
-function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('fcadastro').addEventListener('submit',cadastrarConta);$('fp').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);salvarTabela('prestadores',{nome:f.get('nome'),telefone:f.get('telefone'),endereco:f.get('endereco'),prazo_dias:Number(f.get('prazo_dias'))},ev.target)});$('fs').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);if(f.get('data_prevista')<f.get('data_saida'))return alert('Prazo não pode ser anterior à saída');salvarTabela('servicos',{prestador_id:f.get('prestador_id'),descricao:f.get('descricao'),quantidade:Number(f.get('quantidade')),data_saida:f.get('data_saida'),data_prevista:f.get('data_prevista'),observacoes:f.get('observacoes'),criado_por:session.user.id},ev.target)});$('prestadorSelect').addEventListener('change',()=>{let pr=p.find(x=>x.id===$('prestadorSelect').value);if(pr)$('previsao').value=addDays($('saida').value||today(),pr.prazo_dias)});$('saida').addEventListener('change',()=>$('prestadorSelect').dispatchEvent(new Event('change')));$('lotePrestador').addEventListener('change',atualizarPrevisaoLote);
+function init(){if(!window.supabase){$('loginmsg').textContent='Falha ao carregar biblioteca. Verifique sua internet.';return}client=window.supabase.createClient(URL_SUPABASE,CHAVE_PUBLICA);$('flogin').addEventListener('submit',entrar);$('baixaForm').addEventListener('submit',confirmarBaixa);
+ $('baixaFechar').addEventListener('click',fecharBaixa);
+ $('baixaCancelar').addEventListener('click',fecharBaixa);
+ $('baixaDialog').addEventListener('close',()=>{if(!$('baixaSalvar').disabled)baixaSelecionada=null});$('fcadastro').addEventListener('submit',cadastrarConta);$('fp').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);salvarTabela('prestadores',{nome:f.get('nome'),telefone:f.get('telefone'),endereco:f.get('endereco'),prazo_dias:Number(f.get('prazo_dias'))},ev.target)});$('fs').addEventListener('submit',ev=>{ev.preventDefault();const f=new FormData(ev.target);if(f.get('data_prevista')<f.get('data_saida'))return alert('Prazo não pode ser anterior à saída');salvarTabela('servicos',{prestador_id:f.get('prestador_id'),descricao:f.get('descricao'),quantidade:Number(f.get('quantidade')),data_saida:f.get('data_saida'),data_prevista:f.get('data_prevista'),observacoes:f.get('observacoes'),criado_por:session.user.id},ev.target)});$('prestadorSelect').addEventListener('change',()=>{let pr=p.find(x=>x.id===$('prestadorSelect').value);if(pr)$('previsao').value=addDays($('saida').value||today(),pr.prazo_dias)});$('saida').addEventListener('change',()=>$('prestadorSelect').dispatchEvent(new Event('change')));$('lotePrestador').addEventListener('change',atualizarPrevisaoLote);
 $('loteSaida').addEventListener('change',atualizarPrevisaoLote);
 $('loteLinhas').addEventListener('input',atualizarResumoLote);
 $('loteLinhas').addEventListener('click',ev=>{
