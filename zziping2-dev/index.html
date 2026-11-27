@@ -117,7 +117,7 @@ function calculateProviderWorkload(movimentos,retornos,faccoes,etapas){
  for(const r of retornos)received.set(r.movimentacao_id,(received.get(r.movimentacao_id)||0)+Number(r.quantidade_recebida||0));
  const etapaMap=new Map(etapas.map(e=>[e.id,e]));
  const providers=new Map(faccoes.map(f=>[f.id,{id:f.id,nome:f.nome,ativo:f.ativo,pendentes:0,atrasadas:0,remessas:0,servicos:new Set()}]));
- const hoje=new Date().toISOString().slice(0,10);
+ const agora=new Date();const hoje=agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-'+String(agora.getDate()).padStart(2,'0');
  for(const m of movimentos){
   if(!m.faccao_id)continue; // etapas internas não ocupam a capacidade das facções
   const saldo=Math.max(0,Number(m.quantidade_enviada||0)-(received.get(m.id)||0));
